@@ -17,6 +17,11 @@ endif()
 # Initialize the SDK
 pico_sdk_init()
 
+
+# Add the directory that contains FreeRTOSConfig.h
+include_directories(${CMAKE_SOURCE_DIR})  # Add root directory to include path
+
+
 if (NOT PICO_NO_HARDWARE)
     add_subdirectory(ultrasonic)
     add_subdirectory(encoder)

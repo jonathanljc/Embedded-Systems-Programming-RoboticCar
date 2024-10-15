@@ -3,14 +3,21 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
-// Definitions for the trigger and echo pins
 #define TRIGPIN 1
 #define ECHOPIN 0
+
+#define MOVING_AVERAGE_SIZE 5  // Number of recent measurements to consider for moving average
 
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width = 0;
 volatile bool obstacleDetected = false;
+
+double moving_average_buffer[MOVING_AVERAGE_SIZE];  // Buffer to store recent distance measurements
+int buffer_index = 0;  // Index to keep track of the position in the buffer
+int buffer_filled = 0;  // Flag to indicate whether the buffer is fully populated
 
 // Kalman filter structure
 typedef struct kalman_state_
@@ -56,9 +63,9 @@ void kalman_update(kalman_state *state, double measurement)
     state->p = state->p + state->q;
 
     // Measurement update
-    state->k = state->p / (state->p + state->r); //calculate the Kalman gain (k)
-    state->x = state->x + state->k * (measurement - state->x); //update the estimate (x)
-    state->p = (1 - state->k) * state->p; //update the uncertainty (p)
+    state->k = state->p / (state->p + state->r);  // Calculate Kalman gain
+    state->x = state->x + state->k * (measurement - state->x);  // Update estimate
+    state->p = (1 - state->k) * state->p;  // Update uncertainty
 }
 
 // Set up the ultrasonic sensor pins
@@ -78,16 +85,38 @@ uint64_t getPulse()
 {
     // Trigger a 10us pulse
     gpio_put(TRIGPIN, 1);
-    sleep_us(10);
+    vTaskDelay(pdMS_TO_TICKS(10));  // Use FreeRTOS delay instead of sleep_us()
     gpio_put(TRIGPIN, 0);
     
     // Wait for 1ms to allow time for pulse measurement
-    sleep_ms(1);
+    vTaskDelay(pdMS_TO_TICKS(1));  // Use FreeRTOS delay instead of sleep_ms()
 
     return pulse_width;
 }
 
-// Get distance in centimeters and update with Kalman filter
+// Calculate the moving average of the buffer
+double calculate_moving_average(double new_value)
+{
+    moving_average_buffer[buffer_index] = new_value;  // Store the new value in the buffer
+    buffer_index = (buffer_index + 1) % MOVING_AVERAGE_SIZE;  // Update buffer index
+
+    // If the buffer is fully populated, use all the values for averaging
+    if (buffer_index == 0)
+        buffer_filled = 1;
+
+    double sum = 0;
+    int count = buffer_filled ? MOVING_AVERAGE_SIZE : buffer_index;  // Use available values if buffer is not filled
+
+    // Calculate the sum of the buffer
+    for (int i = 0; i < count; i++)
+    {
+        sum += moving_average_buffer[i];
+    }
+
+    return sum / count;  // Return the average
+}
+
+// Get distance in centimeters and update with Kalman filter and moving average
 double getCm(kalman_state *state)
 {
     // Get pulse width
@@ -96,8 +125,11 @@ double getCm(kalman_state *state)
     // Convert pulse length to distance in cm (Speed of sound: 343 m/s = 29 us/cm)
     double measured = pulseLength / 29.0 / 2.0;
 
-    // Update the Kalman filter state with the new measurement
-    kalman_update(state, measured);
+    // Apply the moving average filter
+    double averaged_distance = calculate_moving_average(measured);
+
+    // Update the Kalman filter state with the new averaged value
+    kalman_update(state, averaged_distance);
 
     // Check if an obstacle is detected within 10 cm
     if (state->x < 10)
@@ -113,20 +145,11 @@ double getCm(kalman_state *state)
     return state->x;
 }
 
-int main()
+// Task to handle the ultrasonic sensor
+void ultrasonic_task(void *pvParameters)
 {
-    // Initialize the sensor and Kalman filter
-    stdio_init_all();
-    printf("Setting up ultrasonic pins\n");
-    setupUltrasonicPins();
+    kalman_state *state = (kalman_state *)pvParameters;
 
-    // Initialize the Kalman filter with example parameters
-    kalman_state *state = kalman_init(1, 100, 1, 0);
-
-    // Allow some time for the system to stabilize
-    sleep_ms(1000);
-
-    // Main loop
     while (true)
     {
         // Get the filtered distance in centimeters
@@ -142,8 +165,27 @@ int main()
         }
 
         // Delay between readings
-        sleep_ms(500);
+        vTaskDelay(pdMS_TO_TICKS(500));  // Use FreeRTOS delay
     }
+}
 
+int main()
+{
+    // Initialize the sensor and Kalman filter
+    stdio_init_all();
+    printf("Setting up ultrasonic pins\n");
+    setupUltrasonicPins();
+
+    // Initialize the Kalman filter with example parameters
+    kalman_state *state = kalman_init(1, 100, 1, 0);
+
+    // Create the ultrasonic sensor task
+    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 1024, (void *)state, 1, NULL);
+
+    // Start the FreeRTOS scheduler
+    vTaskStartScheduler();
+
+    // The program should never reach here because the scheduler takes over
+    while (1);
     return 0;
 }
