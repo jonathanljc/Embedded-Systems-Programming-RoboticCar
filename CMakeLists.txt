@@ -25,4 +25,5 @@ include_directories(${CMAKE_SOURCE_DIR})  # Add root directory to include path
 if (NOT PICO_NO_HARDWARE)
     add_subdirectory(ultrasonic)
     add_subdirectory(encoder)
+    add_subdirectory(magnetometer)
 endif ()
