@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
-include(pico_extras_import_optional.cmake)
 include(FreeRTOS_Kernel_import.cmake)
+include(pico_extras_import_optional.cmake)
 
 project(INF2004_TEAM_P1C C CXX ASM)
 set(CMAKE_C_STANDARD 11)
