@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Pull in SDK (must be before project)
-include(pico_sdk_import.cmake)
+set(PICO_SDK_FETCH_FROM_GIT on)
+include(pico_sdk_import.cmake)  
 include(FreeRTOS_Kernel_import.cmake)
 include(pico_extras_import_optional.cmake)
 
@@ -27,4 +28,5 @@ if (NOT PICO_NO_HARDWARE)
     add_subdirectory(encoder)
     add_subdirectory(magnetometer)
     add_subdirectory(wifi)
+    add_subdirectory(motor)
 endif ()
