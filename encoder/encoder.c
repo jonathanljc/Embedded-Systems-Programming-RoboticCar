@@ -1,107 +1,122 @@
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/gpio.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
+#include <stdio.h> // For printf()
+#include "pico/stdlib.h" // For stdio_init_all() and sleep_ms()
+#include "hardware/gpio.h" // For GPIO functions
+#include "FreeRTOS.h" // For FreeRTOS API
+#include "task.h"    // For FreeRTOS tasks
+#include "semphr.h" // For FreeRTOS semaphores
 #include "pico/time.h"  // For time functions
+#include "message_buffer.h" // For Message Buffer
 
-#define WHEEL_ENCODER_PIN 2
+#define WHEEL_ENCODER_PIN 2         // GPIO pin for the wheel encoder   
 #define ENCODER_NOTCHES_PER_REV 20  // Number of notches (slots) on the encoder disk
 #define WHEEL_DIAMETER 0.065        // Diameter of the wheel in meters (65mm) according to datasheet
 #define WHEEL_CIRCUMFERENCE 0.2042  // Circumference of the wheel in meters (calculated as π * Diameter)
 #define DISTANCE_PER_NOTCH 0.01021  // Distance traveled per notch (Circumference / ENCODER_NOTCHES_PER_REV)
-#define NO_PULSE_TIMEOUT_MS 1000    // Timeout for detecting zero speed
+#define MICROSECONDS_IN_A_SECOND 1000000.0  // Number of microseconds in one second
 
-static volatile uint32_t notch_count = 0;
-static volatile bool pulse_width_ready = false;  // Flag to indicate new pulse width data
-static float speed = 0.0;
-static float total_distance = 0.0;  // To keep track of total distance traveled
-static volatile uint32_t last_rising_time = 0;
-static volatile uint32_t pulse_width = 0;  // Pulse width in microseconds
-static uint32_t last_speed_time = 0;  // To track the last time speed was updated
+// Struct to hold pulse data to be passed between tasks
+typedef struct {
+    uint32_t pulse_width;
+    float speed;
+    float total_distance;
+    uint32_t notch_count;
+} PulseData_t;
 
-SemaphoreHandle_t pulseSemaphore;  // Semaphore to sync interrupt and task
+static volatile uint32_t notch_count = 0; // Notch count to track the number of notches
+static volatile uint32_t last_rising_time = 0; // Capture the time of the rising edge
+static volatile uint32_t last_falling_time = 0;  // Capture the time of the falling edge
+static uint32_t pulse_width = 0;  // Pulse width calculated in the task
 
-// Interrupt callback function with diagnostics
-void gpio_callback(uint gpio, uint32_t events) {
-    uint32_t current_time = to_us_since_boot(get_absolute_time());  // Capture the current time in microseconds
+TaskHandle_t pulseTaskHandle = NULL; // Handle for the pulse width task
+TaskHandle_t speedTaskHandle;      // Handle for the speed task
+MessageBufferHandle_t messageBuffer;  // Message buffer handle
 
-    if (events & GPIO_IRQ_EDGE_RISE) {
-        // Rising edge: notch starting to pass
-        last_rising_time = current_time;
+// Interrupt callback function
+void gpio_callback(uint gpio, uint32_t events) { // gpio is the pin number, events is the GPIO IRQ event
+    uint32_t current_time = to_us_since_boot(get_absolute_time());  // Capture current time in microseconds
+
+    if (events & GPIO_IRQ_EDGE_RISE) { // Check if the rising edge event occurred
+        last_rising_time = current_time;  // Capture rising edge timestamp
     }
 
-    if (events & GPIO_IRQ_EDGE_FALL) {
-        // Falling edge: notch has passed, calculate pulse width
-        pulse_width = current_time - last_rising_time;
-        pulse_width_ready = true;  // Set flag to handle in the task
+    if (events & GPIO_IRQ_EDGE_FALL) { // Check if the falling edge event occurred
+        last_falling_time = current_time;  // Capture falling edge timestamp
 
         // Increment notch count
-        notch_count++;
-        total_distance += DISTANCE_PER_NOTCH;
+        notch_count++; 
 
-        // Signal task to process the pulse
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xSemaphoreGiveFromISR(pulseSemaphore, &xHigherPriorityTaskWoken);
+        // Signal task to process the pulse data
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE; // Initial value of the flag
+        vTaskNotifyGiveFromISR(pulseTaskHandle, &xHigherPriorityTaskWoken); // Notify the task from ISR
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  // Yield if a higher-priority task is unblocked
     }
 }
 
-// Function to calculate speed based on pulse width
-void calculate_speed_from_pulse_width() {
-    if (pulse_width > 0) {
-        // Convert pulse width from microseconds to seconds
-        float pulse_width_sec = pulse_width / 1000000.0;  // Convert microseconds to seconds
+// Task 1: Pulse Width Calculation Task
+void pulse_width_task(void *pvParameters) {
+    while (1) {
+        // Wait for notification from the ISR
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Block until notified
 
-        // Calculate speed based on pulse width
-        speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+        // Process the pulse data (calculate pulse width)
+        pulse_width = last_falling_time - last_rising_time;
 
-        // Print speed
-        printf("Calculated Speed: %.3f meters/second\n", speed);
+        // Notify the speed calculation task if needed
+        xTaskNotifyGive(speedTaskHandle);
     }
 }
 
-// Task to handle the pulse width calculations
-void pulse_task(void *pvParameters) {
+// Task 2: Speed and Distance Calculation
+void speed_task(void *pvParameters) {
     while (1) {
-        // Wait until the pulse width is ready
-        if (xSemaphoreTake(pulseSemaphore, portMAX_DELAY) == pdTRUE) {
-            if (pulse_width_ready) {
-                pulse_width_ready = false;  // Reset the flag
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-                // Calculate speed based on pulse width
-                calculate_speed_from_pulse_width();
+        if (pulse_width > 0) {
+            float pulse_width_sec = pulse_width / MICROSECONDS_IN_A_SECOND;
+            float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+            float total_distance = notch_count * DISTANCE_PER_NOTCH;
 
-                // Print pulse width, notch count, speed, and total distance traveled
-                printf("Pulse Width: %u us, Notch Count: %u, Speed: %.3f meters/second, Total Distance: %.3f meters\n",
-                       pulse_width, notch_count, speed, total_distance);
-            }
+            // Prepare data to send to the logging task
+            PulseData_t data;
+            data.pulse_width = pulse_width;
+            data.speed = speed;
+            data.total_distance = total_distance;
+            data.notch_count = notch_count;
+
+            // Send the structured data to the logging task via message buffer
+            xMessageBufferSend(messageBuffer, &data, sizeof(data), portMAX_DELAY);
         }
+    }
+}
 
-        //vTaskDelay(pdMS_TO_TICKS(50));  // Delay for 50ms between checks
+// Task 3: Logging Task
+void log_task(void *pvParameters) {
+    while (1) {
+        // Receive data from Task 2 via message buffer
+        PulseData_t received_data;
+        xMessageBufferReceive(messageBuffer, &received_data, sizeof(received_data), portMAX_DELAY);
+
+        // Log the data
+        printf("Notch Count: %u, Pulse Width: %u us, Speed: %.3f meters/second, Total Distance: %.3f meters\n",
+               received_data.notch_count, received_data.pulse_width, received_data.speed, received_data.total_distance);
     }
 }
 
 int main() {
     stdio_init_all();
-    printf("Wheel Encoder with Distance, Speed, and Pulse Width Calculation\n");
-
     // Initialize the GPIO pin for the wheel encoder
     gpio_init(WHEEL_ENCODER_PIN);
     gpio_set_dir(WHEEL_ENCODER_PIN, GPIO_IN);
     gpio_pull_up(WHEEL_ENCODER_PIN);  // Use pull-up resistor
     gpio_set_irq_enabled_with_callback(WHEEL_ENCODER_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
-    // Create the semaphore for synchronization between ISR and task
-    pulseSemaphore = xSemaphoreCreateBinary();
-    if (pulseSemaphore == NULL) {
-        printf("Failed to create the semaphore.\n");
-        return 1;  // Exit if semaphore creation failed
-    }
+    // Create the message buffer for synchronization
+    messageBuffer = xMessageBufferCreate(256);  // Create a message buffer of size 256 bytes
 
-    // Create the FreeRTOS task for processing encoder pulses
-    xTaskCreate(pulse_task, "Pulse Task", 1024, NULL, 1, NULL);
+    // Create the FreeRTOS tasks
+    xTaskCreate(pulse_width_task, "Pulse Width Task", 1024, NULL, 1, &pulseTaskHandle);
+    xTaskCreate(speed_task, "Speed Task", 1024, NULL, 1, &speedTaskHandle);
+    xTaskCreate(log_task, "Log Task", 1024, NULL, 1, NULL);
 
     // Start the FreeRTOS scheduler
     vTaskStartScheduler();
