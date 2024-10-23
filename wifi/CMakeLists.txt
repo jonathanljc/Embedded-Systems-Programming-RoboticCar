@@ -27,6 +27,7 @@ ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
 target_link_libraries(client
 pico_cyw43_arch_lwip_threadsafe_background
 pico_stdlib
+hardware_adc
 )
 
 pico_add_extra_outputs(client)
