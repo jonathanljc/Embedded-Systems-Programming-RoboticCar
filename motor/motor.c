@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
+#include "pid.h"
 
 // Define GPIO pins
 #define L_MOTOR_PWM_PIN 0     // GP2 for PWM
@@ -9,6 +10,9 @@
 #define R_MOTOR_PWM_PIN 1     // GP2 for PWM
 #define R_MOTOR_DIR_PIN1 4    // GP0 for direction
 #define R_MOTOR_DIR_PIN2 5    // GP1 for direction
+
+// Define PID controller
+PIDController pid;
 
 // Function to set up the PWM
 void setup_pwm(uint gpioLeft, uint gpioRight) {
@@ -132,6 +136,9 @@ int main (){
 
     // Set up PWM
     setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+
+    // Initialize PID controller
+    pid_init(&pid, 1.0, 0.1, 0.01);
 
     // Function Calls
     move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
