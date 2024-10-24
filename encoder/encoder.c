@@ -1,100 +1,128 @@
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/gpio.h"
-#include "pico/time.h" // For time functions
+#include <stdio.h> // For printf()
+#include "pico/stdlib.h" // For stdio_init_all() and sleep_ms()
+#include "hardware/gpio.h" // For GPIO functions
+#include "FreeRTOS.h" // For FreeRTOS API
+#include "task.h"    // For FreeRTOS tasks
+#include "semphr.h" // For FreeRTOS semaphores
+#include "pico/time.h"  // For time functions
+#include "message_buffer.h" // For Message Buffer
 
-#define WHEEL_ENCODER_PIN 2
-#define ENCODER_NOTCHES_PER_REV 20        // Number of notches (slots) on the encoder disk
-#define WHEEL_DIAMETER 0.065              // Diameter of the wheel in meters (65mm) according to datasheet
-#define WHEEL_CIRCUMFERENCE 0.2042        // Circumference of the wheel in meters (calculated as π * Diameter)
-#define DISTANCE_PER_NOTCH 0.01021        // Distance traveled per notch (Circumference / ENCODER_NOTCHES_PER_REV)
-#define MIN_PULSE_TIME_US 500             // Minimum pulse width in microseconds to filter noise (debouncing)
-#define NO_PULSE_TIMEOUT_MS 1000          // Timeout for detecting zero speed
+#define WHEEL_ENCODER_PIN 2         // GPIO pin for the wheel encoder   
+#define ENCODER_NOTCHES_PER_REV 20  // Number of notches (slots) on the encoder disk
+#define WHEEL_DIAMETER 0.065        // Diameter of the wheel in meters (65mm) according to datasheet
+#define WHEEL_CIRCUMFERENCE 0.2042  // Circumference of the wheel in meters (calculated as π * Diameter)
+#define DISTANCE_PER_NOTCH 0.01021  // Distance traveled per notch (Circumference / ENCODER_NOTCHES_PER_REV)
+#define MICROSECONDS_IN_A_SECOND 1000000.0  // Number of microseconds in one second
 
-static volatile uint32_t notch_count = 0;
-static volatile bool pulse_width_ready = false;  // Flag to indicate new pulse width data
-static float speed = 0.0;
-static float total_distance = 0.0;  // To keep track of total distance traveled
-static volatile uint32_t last_rising_time = 0;
-static volatile uint32_t pulse_width = 0;  // Pulse width in microseconds
-static uint32_t last_speed_time = 0;  // To track the last time speed was updated
+// Struct to hold pulse data to be passed between tasks
+typedef struct {
+    uint32_t pulse_width;
+    float speed;
+    float total_distance;
+    uint32_t notch_count;
+} PulseData_t;
 
-// Interrupt callback function (minimized work)
-void gpio_callback(uint gpio, uint32_t events) {
-    uint32_t current_time = to_us_since_boot(get_absolute_time());  // Capture the current time in microseconds
+static volatile uint32_t notch_count = 0; // Notch count to track the number of notches
+static volatile uint32_t last_rising_time = 0; // Capture the time of the rising edge
+static volatile uint32_t last_falling_time = 0;  // Capture the time of the falling edge
+static uint32_t pulse_width = 0;  // Pulse width calculated in the task
 
-    if (events & GPIO_IRQ_EDGE_RISE) {
-        notch_count++;  // Increment the notch count
+TaskHandle_t pulseTaskHandle = NULL; // Handle for the pulse width task
+TaskHandle_t speedTaskHandle;      // Handle for the speed task
+MessageBufferHandle_t messageBuffer;  // Message buffer handle
 
-        // Calculate pulse width only if last rising edge time is available and debounce the noise
-        if (last_rising_time != 0 && (current_time - last_rising_time) > MIN_PULSE_TIME_US) {
-            pulse_width = current_time - last_rising_time;
-            pulse_width_ready = true;  // Set flag to handle in main loop
-        }
+// Interrupt callback function
+void gpio_callback(uint gpio, uint32_t events) { // gpio is the pin number, events is the GPIO IRQ event
+    uint32_t current_time = to_us_since_boot(get_absolute_time());  // Capture current time in microseconds
 
-        last_rising_time = current_time;  // Update the last rising time
-        total_distance += DISTANCE_PER_NOTCH;  // Update distance immediately after each pulse
-        last_speed_time = to_ms_since_boot(get_absolute_time());  // Track the last time speed was updated
+    if (events & GPIO_IRQ_EDGE_RISE) { // Check if the rising edge event occurred
+        last_rising_time = current_time;  // Capture rising edge timestamp
+    }
+
+    if (events & GPIO_IRQ_EDGE_FALL) { // Check if the falling edge event occurred
+        last_falling_time = current_time;  // Capture falling edge timestamp
+
+        // Increment notch count
+        notch_count++; 
+
+        // Signal task to process the pulse data
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE; // Initial value of the flag
+        vTaskNotifyGiveFromISR(pulseTaskHandle, &xHigherPriorityTaskWoken); // Notify the task from ISR
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  // Yield if a higher-priority task is unblocked
     }
 }
 
-// Function to calculate speed based on pulse width
-void calculate_speed_from_pulse_width() {
-    if (pulse_width > 0) {
-        // Convert pulse width from microseconds to seconds
-        float pulse_width_sec = pulse_width / 1000000.0;  // Convert microseconds to seconds
+// Task 1: Pulse Width Calculation Task
+void pulse_width_task(void *pvParameters) {
+    while (1) {
+        // Wait for notification from the ISR
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Block until notified
 
-        // Calculate speed based on pulse width
-        speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+        // Process the pulse data (calculate pulse width)
+        pulse_width = last_falling_time - last_rising_time;
 
-        // Print speed
-        printf("Calculated Speed: %.3f meters/second\n", speed);
+        // Notify the speed calculation task if needed
+        xTaskNotifyGive(speedTaskHandle);
     }
 }
 
-// Function to check for no new pulses and set speed to 0 if no pulses are detected for a while
-void check_for_no_pulse() {
-    uint32_t current_time_ms = to_ms_since_boot(get_absolute_time());
+// Task 2: Speed and Distance Calculation
+void speed_task(void *pvParameters) {
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-    // If more than NO_PULSE_TIMEOUT_MS has passed since the last speed update, set speed to 0
-    if (current_time_ms - last_speed_time > NO_PULSE_TIMEOUT_MS) {
-        if (speed != 0.0) {  // Only print if speed was not already zero
-            speed = 0.0;
-            printf("No pulse detected for a while, setting speed to 0.\n");
+        if (pulse_width > 0) {
+            float pulse_width_sec = pulse_width / MICROSECONDS_IN_A_SECOND;
+            float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+            float total_distance = notch_count * DISTANCE_PER_NOTCH;
+
+            // Prepare data to send to the logging task
+            PulseData_t data;
+            data.pulse_width = pulse_width;
+            data.speed = speed;
+            data.total_distance = total_distance;
+            data.notch_count = notch_count;
+
+            // Send the structured data to the logging task via message buffer
+            xMessageBufferSend(messageBuffer, &data, sizeof(data), portMAX_DELAY);
         }
+    }
+}
+
+// Task 3: Logging Task
+void log_task(void *pvParameters) {
+    while (1) {
+        // Receive data from Task 2 via message buffer
+        PulseData_t received_data;
+        xMessageBufferReceive(messageBuffer, &received_data, sizeof(received_data), portMAX_DELAY);
+
+        // Log the data
+        printf("Notch Count: %u, Pulse Width: %u us, Speed: %.3f meters/second, Total Distance: %.3f meters\n",
+               received_data.notch_count, received_data.pulse_width, received_data.speed, received_data.total_distance);
     }
 }
 
 int main() {
     stdio_init_all();
-
-    printf("Wheel Encoder with Distance, Speed, and Pulse Width Calculation\n");
-
     // Initialize the GPIO pin for the wheel encoder
     gpio_init(WHEEL_ENCODER_PIN);
     gpio_set_dir(WHEEL_ENCODER_PIN, GPIO_IN);
-    gpio_pull_up(WHEEL_ENCODER_PIN);  // or gpio_pull_down(WHEEL_ENCODER_PIN) depending on your setup
-    gpio_set_irq_enabled_with_callback(WHEEL_ENCODER_PIN, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);  // Only use rising edge
+    gpio_pull_up(WHEEL_ENCODER_PIN);  // Use pull-up resistor
+    gpio_set_irq_enabled_with_callback(WHEEL_ENCODER_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
-    // Main loop
+    // Create the message buffer for synchronization
+    messageBuffer = xMessageBufferCreate(256);  // Create a message buffer of size 256 bytes
+
+    // Create the FreeRTOS tasks
+    xTaskCreate(pulse_width_task, "Pulse Width Task", 1024, NULL, 1, &pulseTaskHandle);
+    xTaskCreate(speed_task, "Speed Task", 1024, NULL, 1, &speedTaskHandle);
+    xTaskCreate(log_task, "Log Task", 1024, NULL, 1, NULL);
+
+    // Start the FreeRTOS scheduler
+    vTaskStartScheduler();
+
     while (1) {
-        // Check if new pulse width data is ready
-        if (pulse_width_ready) {
-            printf("Pulse Width: %u us\n", pulse_width);
-            pulse_width_ready = false;  // Reset the flag after printing
-
-            // Calculate speed based on pulse width
-            calculate_speed_from_pulse_width();
-        }
-
-        // Check for no pulses and update speed to 0 if necessary
-        check_for_no_pulse();
-
-        // Print notch count, speed, and total distance traveled
-        printf("Notch Count: %u, Speed: %.3f meters/second, Total Distance: %.3f meters\n", 
-               notch_count, speed, total_distance);
-
-        sleep_ms(100);  // Small delay for CPU to handle other tasks
+        // Main loop is never reached as the FreeRTOS scheduler takes over
     }
 
     return 0;
