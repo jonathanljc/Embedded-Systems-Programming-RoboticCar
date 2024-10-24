@@ -99,10 +99,10 @@ void stop_car(uint gpioLeft, uint gpioRight) {
 
 void set_speed1(uint gpioLeft, uint gpioRight) {
     // Set the PWM level for the left motor
-    pwm_set_chan_level(pwm_gpio_to_slice_num(gpioLeft), PWM_CHAN_A, 12500/4);
+    pwm_set_chan_level(pwm_gpio_to_slice_num(gpioLeft), PWM_CHAN_A, 12500/3);
 
     // Set the PWM level for the right motor
-    pwm_set_chan_level(pwm_gpio_to_slice_num(gpioRight), PWM_CHAN_B, 12500/4);
+    pwm_set_chan_level(pwm_gpio_to_slice_num(gpioRight), PWM_CHAN_B, 12500/3);
 }
 
 void set_speed2(uint gpioLeft, uint gpioRight) {
