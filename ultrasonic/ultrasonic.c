@@ -9,15 +9,9 @@
 #define TRIGPIN 1
 #define ECHOPIN 0
 
-#define MOVING_AVERAGE_SIZE 5  // Number of recent measurements to consider for moving average
-
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width = 0;
 volatile bool obstacleDetected = false;
-
-double moving_average_buffer[MOVING_AVERAGE_SIZE];  // Buffer to store recent distance measurements
-int buffer_index = 0;  // Index to keep track of the position in the buffer
-int buffer_filled = 0;  // Flag to indicate whether the buffer is fully populated
 
 // Kalman filter structure
 typedef struct kalman_state_
@@ -94,29 +88,7 @@ uint64_t getPulse()
     return pulse_width;
 }
 
-// Calculate the moving average of the buffer
-double calculate_moving_average(double new_value)
-{
-    moving_average_buffer[buffer_index] = new_value;  // Store the new value in the buffer
-    buffer_index = (buffer_index + 1) % MOVING_AVERAGE_SIZE;  // Update buffer index
-
-    // If the buffer is fully populated, use all the values for averaging
-    if (buffer_index == 0)
-        buffer_filled = 1;
-
-    double sum = 0;
-    int count = buffer_filled ? MOVING_AVERAGE_SIZE : buffer_index;  // Use available values if buffer is not filled
-
-    // Calculate the sum of the buffer
-    for (int i = 0; i < count; i++)
-    {
-        sum += moving_average_buffer[i];
-    }
-
-    return sum / count;  // Return the average
-}
-
-// Get distance in centimeters and update with Kalman filter and moving average
+// Get distance in centimeters and update with Kalman filter
 double getCm(kalman_state *state)
 {
     // Get pulse width
@@ -125,11 +97,8 @@ double getCm(kalman_state *state)
     // Convert pulse length to distance in cm (Speed of sound: 343 m/s = 29 us/cm)
     double measured = pulseLength / 29.0 / 2.0;
 
-    // Apply the moving average filter
-    double averaged_distance = calculate_moving_average(measured);
-
-    // Update the Kalman filter state with the new averaged value
-    kalman_update(state, averaged_distance);
+    // Update the Kalman filter state with the new measurement
+    kalman_update(state, measured);
 
     // Check if an obstacle is detected within 10 cm
     if (state->x < 10)
@@ -165,7 +134,7 @@ void ultrasonic_task(void *pvParameters)
         }
 
         // Delay between readings
-        vTaskDelay(pdMS_TO_TICKS(500));  // Use FreeRTOS delay
+        vTaskDelay(pdMS_TO_TICKS(100));  // Use FreeRTOS delay
     }
 }
 
@@ -177,7 +146,7 @@ int main()
     setupUltrasonicPins();
 
     // Initialize the Kalman filter with example parameters
-    kalman_state *state = kalman_init(1, 100, 1, 0);
+    kalman_state *state = kalman_init(2, 50, 1, 0);
 
     // Create the ultrasonic sensor task
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 1024, (void *)state, 1, NULL);
