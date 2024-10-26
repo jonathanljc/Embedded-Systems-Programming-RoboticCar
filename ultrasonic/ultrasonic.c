@@ -5,13 +5,23 @@
 #include "hardware/timer.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "message_buffer.h"  // Include FreeRTOS message buffer library
 
 #define TRIGPIN 1
 #define ECHOPIN 0
 
+// Global variables and message buffer handle
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width = 0;
 volatile bool obstacleDetected = false;
+MessageBufferHandle_t printMessageBuffer;  // Message buffer for printing data
+
+// Structure to hold the distance and obstacle status
+typedef struct
+{
+    double distance;
+    bool obstacleDetected;
+} DistanceMessage;
 
 // Kalman filter structure
 typedef struct kalman_state_
@@ -62,28 +72,16 @@ void kalman_update(kalman_state *state, double measurement)
     state->p = (1 - state->k) * state->p;  // Update uncertainty
 }
 
-// Set up the ultrasonic sensor pins
-void setupUltrasonicPins()
-{
-    gpio_init(TRIGPIN);
-    gpio_init(ECHOPIN);
-    gpio_set_dir(TRIGPIN, GPIO_OUT);
-    gpio_set_dir(ECHOPIN, GPIO_IN);
-
-    // Enable rising and falling edge interrupts on the echo pin
-    gpio_set_irq_enabled_with_callback(ECHOPIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &get_echo_pulse);
-}
-
 // Send a pulse and get the pulse width
 uint64_t getPulse()
 {
-    // Trigger a 10us pulse
+    // Trigger a 10us pulse (non-blocking delay)
     gpio_put(TRIGPIN, 1);
-    vTaskDelay(pdMS_TO_TICKS(10));  // Use FreeRTOS delay instead of sleep_us()
+    busy_wait_us(10);  // Use busy-wait for a short 10us delay
     gpio_put(TRIGPIN, 0);
     
-    // Wait for 1ms to allow time for pulse measurement
-    vTaskDelay(pdMS_TO_TICKS(1));  // Use FreeRTOS delay instead of sleep_ms()
+    // With a busy-wait for a short delay if you want precise timing:
+    busy_wait_us(1000);  // Wait for 1 ms using a non-blocking busy-wait
 
     return pulse_width;
 }
@@ -118,24 +116,58 @@ double getCm(kalman_state *state)
 void ultrasonic_task(void *pvParameters)
 {
     kalman_state *state = (kalman_state *)pvParameters;
+    double cm;
+    DistanceMessage message;
 
     while (true)
     {
         // Get the filtered distance in centimeters
-        double cm = getCm(state);
+        cm = getCm(state);
 
-        // Print the distance
-        printf("Distance: %.2lf cm\n", cm);
+        // Prepare the message with distance and obstacle detection status
+        message.distance = cm;
+        message.obstacleDetected = obstacleDetected;
 
-        // If an obstacle is detected, print a message
-        if (obstacleDetected)
-        {
-            printf("Obstacle detected within 10 cm!\n");
-        }
+        // Send the message to the print task using a message buffer
+        xMessageBufferSend(printMessageBuffer, &message, sizeof(message), 0);
 
         // Delay between readings
-        vTaskDelay(pdMS_TO_TICKS(100));  // Use FreeRTOS delay
+        vTaskDelay(pdMS_TO_TICKS(50));  // Use FreeRTOS delay
     }
+}
+
+// Task to handle printing
+void print_task(void *pvParameters)
+{
+    DistanceMessage receivedMessage;
+
+    while (true)
+    {
+        // Wait to receive data from the ultrasonic task
+        if (xMessageBufferReceive(printMessageBuffer, &receivedMessage, sizeof(receivedMessage), portMAX_DELAY) > 0)
+        {
+            // Print the received distance
+            printf("Distance: %.2lf cm\n", receivedMessage.distance);
+
+            // If an obstacle is detected, print a warning
+            if (receivedMessage.obstacleDetected)
+            {
+                printf("Obstacle detected within 10 cm! Taking action.\n");
+            }
+        }
+    }
+}
+
+// Set up the ultrasonic sensor pins
+void setupUltrasonicPins()
+{
+    gpio_init(TRIGPIN);
+    gpio_init(ECHOPIN);
+    gpio_set_dir(TRIGPIN, GPIO_OUT);
+    gpio_set_dir(ECHOPIN, GPIO_IN);
+
+    // Enable rising and falling edge interrupts on the echo pin
+    gpio_set_irq_enabled_with_callback(ECHOPIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &get_echo_pulse);
 }
 
 int main()
@@ -146,10 +178,16 @@ int main()
     setupUltrasonicPins();
 
     // Initialize the Kalman filter with example parameters
-    kalman_state *state = kalman_init(2, 50, 1, 0);
+    kalman_state *state = kalman_init(2, 50, 5, 0);  // Adjust parameters for faster adaptation
+
+    // Create a message buffer for printing data (size 256 bytes)
+    printMessageBuffer = xMessageBufferCreate(256);
 
     // Create the ultrasonic sensor task
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 1024, (void *)state, 1, NULL);
+
+    // Create the print task
+    xTaskCreate(print_task, "Print Task", 1024, NULL, 1, NULL);
 
     // Start the FreeRTOS scheduler
     vTaskStartScheduler();
