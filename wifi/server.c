@@ -17,8 +17,8 @@
 #define DEBUG_printf printf
 #define BUF_SIZE 2048
 #define POLL_TIME_S 5
-#define WIFI_SSID "Felix-iPhone"
-#define WIFI_PASSWORD "felixfelix"
+#define WIFI_SSID "SHARKY0"
+#define WIFI_PASSWORD "B204491DR"
 
 typedef struct TCP_SERVER_T_
 {
@@ -31,6 +31,12 @@ typedef struct TCP_SERVER_T_
     int recv_len;
     int run_count;
 } TCP_SERVER_T;
+
+static void tcp_server_err(void *arg, err_t err);
+static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+static err_t tcp_server_send_data(void *arg, struct tcp_pcb *tpcb);
+static err_t tcp_server_close(void *arg);
+static bool tcp_server_open(TCP_SERVER_T *state);
 
 static TCP_SERVER_T *tcp_server_init(void)
 {
@@ -63,12 +69,6 @@ static err_t tcp_server_close(void *arg)
         }
         state->client_pcb = NULL;
     }
-    if (state->server_pcb)
-    {
-        tcp_arg(state->server_pcb, NULL);
-        tcp_close(state->server_pcb);
-        state->server_pcb = NULL;
-    }
     return err;
 }
 
@@ -77,34 +77,27 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     TCP_SERVER_T *state = (TCP_SERVER_T *)arg;
     if (!p)
     {
-        return tcp_server_close(arg); // Close connection if the client disconnects.
+        DEBUG_printf("Client disconnected\n");
+        tcp_server_close(state);  // Close client connection
+        return ERR_OK;  // Stay in listening mode without re-binding
     }
 
     cyw43_arch_lwip_check();
     if (p->tot_len > 0)
     {
-        // DEBUG_printf("Received %d bytes\n", p->tot_len);
-
-        // Receive the buffer
         int received_len = pbuf_copy_partial(p, state->buffer_recv, p->tot_len, 0);
         state->buffer_recv[received_len] = '\0'; // Null-terminate the string
 
-        // Remove any trailing \r\n (carriage return/newline) characters
         while (received_len > 0 && (state->buffer_recv[received_len - 1] == '\r' || state->buffer_recv[received_len - 1] == '\n'))
         {
             state->buffer_recv[received_len - 1] = '\0';
             received_len--;
         }
 
-        // Only print if there's remaining content after trimming
         if (received_len > 0)
         {
             DEBUG_printf("Received data: %s\n", state->buffer_recv);
         }
-        //  else {
-        //     // DEBUG_printf("Received only newline characters, ignoring...\n");
-        // }
-
         tcp_recved(tpcb, p->tot_len); // Acknowledge that data was received
     }
 
@@ -120,10 +113,11 @@ static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb)
 
 static void tcp_server_err(void *arg, err_t err)
 {
+    TCP_SERVER_T *state = (TCP_SERVER_T *)arg;
     if (err != ERR_ABRT)
     {
         DEBUG_printf("tcp_client_err_fn %d\n", err);
-        tcp_server_close(arg);
+        tcp_server_close(state); // Close client connection only
     }
 }
 
@@ -147,7 +141,7 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     if (err != ERR_OK || client_pcb == NULL)
     {
         DEBUG_printf("Failure in accept\n");
-        tcp_server_close(arg);
+        tcp_server_close(state);
         return ERR_VAL;
     }
     DEBUG_printf("Client connected\n");
@@ -155,15 +149,13 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     state->client_pcb = client_pcb;
     tcp_arg(client_pcb, state);
     tcp_recv(client_pcb, tcp_server_recv);
-    // tcp_poll(client_pcb, tcp_server_poll, POLL_TIME_S * 2);
     tcp_err(client_pcb, tcp_server_err);
 
-    return tcp_server_send_data(arg, state->client_pcb);;
+    return tcp_server_send_data(arg, state->client_pcb);
 }
 
-static bool tcp_server_open(void *arg)
+static bool tcp_server_open(TCP_SERVER_T *state)
 {
-    TCP_SERVER_T *state = (TCP_SERVER_T *)arg;
     DEBUG_printf("Starting server at %s on port %u\n", ip4addr_ntoa(netif_ip4_addr(netif_list)), TCP_PORT);
 
     struct tcp_pcb *pcb = tcp_new_ip_type(IPADDR_TYPE_ANY);
@@ -184,10 +176,7 @@ static bool tcp_server_open(void *arg)
     if (!state->server_pcb)
     {
         DEBUG_printf("failed to listen\n");
-        if (pcb)
-        {
-            tcp_close(pcb);
-        }
+        tcp_close(pcb);
         return false;
     }
 
@@ -211,7 +200,6 @@ void run_tcp_server(void)
     }
     while (!state->complete)
     {
-        // Poll or wait for Wi-Fi/lwIP work, depending on the architecture.
 #if PICO_CYW43_ARCH_POLL
         cyw43_arch_poll();
         cyw43_arch_wait_for_work_until(make_timeout_time_ms(1000));
