@@ -1,37 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "pico/stdlib.h"
-#include "hardware/gpio.h"
-#include "hardware/timer.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "message_buffer.h"  // Include FreeRTOS message buffer library
+#include "ultrasonic.h"
 
-#define TRIGPIN 1
-#define ECHOPIN 0
-
-// Global variables and message buffer handle
+// Define external variables
 volatile absolute_time_t start_time;
-volatile uint64_t pulse_width = 0;
-volatile bool obstacleDetected = false;
-MessageBufferHandle_t printMessageBuffer;  // Message buffer for printing data
-
-// Structure to hold the distance and obstacle status
-typedef struct
-{
-    double distance;
-    bool obstacleDetected;
-} DistanceMessage;
-
-// Kalman filter structure
-typedef struct kalman_state_
-{
-    double q; // process noise covariance
-    double r; // measurement noise covariance
-    double x; // estimated value
-    double p; // estimation error covariance
-    double k; // kalman gain
-} kalman_state;
+volatile uint64_t pulse_width;
+volatile bool obstacleDetected;
 
 // Initialize the Kalman filter state
 kalman_state *kalman_init(double q, double r, double p, double initial_value)
@@ -168,31 +140,4 @@ void setupUltrasonicPins()
 
     // Enable rising and falling edge interrupts on the echo pin
     gpio_set_irq_enabled_with_callback(ECHOPIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &get_echo_pulse);
-}
-
-int main()
-{
-    // Initialize the sensor and Kalman filter
-    stdio_init_all();
-    printf("Setting up ultrasonic pins\n");
-    setupUltrasonicPins();
-
-    // Initialize the Kalman filter with example parameters
-    kalman_state *state = kalman_init(2, 50, 5, 0);  // Adjust parameters for faster adaptation
-
-    // Create a message buffer for printing data (size 256 bytes)
-    printMessageBuffer = xMessageBufferCreate(256);
-
-    // Create the ultrasonic sensor task
-    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 1024, (void *)state, 1, NULL);
-
-    // Create the print task
-    xTaskCreate(print_task, "Print Task", 1024, NULL, 1, NULL);
-
-    // Start the FreeRTOS scheduler
-    vTaskStartScheduler();
-
-    // The program should never reach here because the scheduler takes over
-    while (1);
-    return 0;
 }

@@ -30,6 +30,7 @@
     "dhcp.h": "c",
     "stdio.h": "c",
     "string": "c",
-    "adc.h": "c"
+    "adc.h": "c",
+    "ultrasonic.h": "c"
   }
 }
