@@ -17,8 +17,8 @@
 #define DEBUG_printf printf
 #define BUF_SIZE 2048
 #define POLL_TIME_S 5
-#define WIFI_SSID "SHARKY0"
-#define WIFI_PASSWORD "B204491DR"
+#define WIFI_SSID "Felix-iPhone"
+#define WIFI_PASSWORD "felixfelix"
 
 typedef struct TCP_SERVER_T_
 {

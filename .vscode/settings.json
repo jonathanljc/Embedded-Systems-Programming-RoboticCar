@@ -27,6 +27,8 @@
     "pbuf.h": "c",
     "cyw43_arch.h": "c",
     "err.h": "c",
-    "dhcp.h": "c"
+    "dhcp.h": "c",
+    "stdio.h": "c",
+    "string": "c"
   }
 }
