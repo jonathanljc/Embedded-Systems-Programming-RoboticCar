@@ -1,4 +1,5 @@
 #include "ultrasonic.h"
+#include "encoder.h"
 
 // Define the global message buffer
 MessageBufferHandle_t printMessageBuffer;
