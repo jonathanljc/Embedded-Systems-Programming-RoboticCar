@@ -1,259 +1,195 @@
-/**
- * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include <string.h>
-#include <time.h>
+#include <math.h>
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
-
-#include "lwip/pbuf.h"
-#include "lwip/tcp.h"
-
+#include "hardware/i2c.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "lwip/tcp.h"
 
-#include "hardware/gpio.h"
-#include "hardware/adc.h"
-
-#define WIFI_SSID "Felix-iPhone"
-#define WIFI_PASSWORD "felixfelix"
-#define TEST_TCP_SERVER_IP "192.168.1.3"
+#define WIFI_SSID "Ong"
+#define WIFI_PASSWORD "12345678"
+#define SERVER_IP "192.168.1.84"
 #define TCP_PORT 4242
-#define DEBUG_printf printf
-#define BUF_SIZE 2048
 
-#define HELLO_MESSAGE "hello"
-#define SEND_INTERVAL_MS 1000 // 1 second
+#define ACCEL_I2C_ADDR 0x19
+#define CTRL_REG1_A 0x20
+#define OUT_X_L_A 0x28
+#define ACCEL_CONVERSION 0.00059841 // Convert to m/s² for ±2g
+#define FILTER_SAMPLES 10            // Number of samples for moving average
 
-typedef struct TCP_CLIENT_T_
-{
+// Circular buffers for moving average filter
+float accel_x_buffer[FILTER_SAMPLES] = {0};
+float accel_y_buffer[FILTER_SAMPLES] = {0};
+float accel_z_buffer[FILTER_SAMPLES] = {0};
+int buffer_index = 0;
+
+// Struct to hold accelerometer data
+typedef struct {
+    float x, y, z;
+} AccelerometerData;
+
+// TCP Client State
+typedef struct {
     struct tcp_pcb *tcp_pcb;
     ip_addr_t remote_addr;
     int sent_len;
-    bool complete;
     bool connected;
-    int recv_len;
 } TCP_CLIENT_T;
 
-static err_t tcp_client_close(void *arg)
-{
-    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
-    err_t err = ERR_OK;
-    if (state->tcp_pcb != NULL)
-    {
-        tcp_arg(state->tcp_pcb, NULL);
-        tcp_sent(state->tcp_pcb, NULL);
-        tcp_recv(state->tcp_pcb, NULL);
-        tcp_err(state->tcp_pcb, NULL);
-        err = tcp_close(state->tcp_pcb);
-        if (err != ERR_OK)
-        {
-            DEBUG_printf("close failed %d, calling abort\n", err);
-            tcp_abort(state->tcp_pcb);
-            err = ERR_ABRT;
+TCP_CLIENT_T *tcp_client_state;
+
+// Initialize GY-511 Accelerometer
+void gy511_init(i2c_inst_t *i2c) {
+    uint8_t config[2];
+    config[0] = CTRL_REG1_A;
+    config[1] = 0x57; // Enable accelerometer, 100Hz, all axes
+    i2c_write_blocking(i2c, ACCEL_I2C_ADDR, config, 2, false);
+}
+
+// Read raw acceleration data
+void gy511_read_acceleration(i2c_inst_t *i2c, int16_t *ax, int16_t *ay, int16_t *az) {
+    uint8_t buf[6];
+    i2c_write_blocking(i2c, ACCEL_I2C_ADDR, (uint8_t[]){OUT_X_L_A | 0x80}, 1, true);
+    i2c_read_blocking(i2c, ACCEL_I2C_ADDR, buf, 6, false);
+
+    *ax = (int16_t)(buf[1] << 8 | buf[0]);
+    *ay = (int16_t)(buf[3] << 8 | buf[2]);
+    *az = (int16_t)(buf[5] << 8 | buf[4]);
+}
+
+// Moving average filter
+void update_moving_average(float *buffer, float new_value) {
+    buffer[buffer_index] = new_value;
+}
+
+float calculate_average(float *buffer) {
+    float sum = 0;
+    for (int i = 0; i < FILTER_SAMPLES; i++) {
+        sum += buffer[i];
+    }
+    return sum / FILTER_SAMPLES;
+}
+
+// Convert raw data to m/s² and apply smoothing
+void process_acceleration(int16_t raw_ax, int16_t raw_ay, int16_t raw_az, AccelerometerData *accel_data) {
+    accel_data->x = raw_ax * ACCEL_CONVERSION;
+    accel_data->y = raw_ay * ACCEL_CONVERSION;
+    accel_data->z = raw_az * ACCEL_CONVERSION;
+
+    update_moving_average(accel_x_buffer, accel_data->x);
+    update_moving_average(accel_y_buffer, accel_data->y);
+    update_moving_average(accel_z_buffer, accel_data->z);
+
+    buffer_index = (buffer_index + 1) % FILTER_SAMPLES;
+
+    accel_data->x = calculate_average(accel_x_buffer);
+    accel_data->y = calculate_average(accel_y_buffer);
+    accel_data->z = calculate_average(accel_z_buffer);
+}
+
+// Generate control command based on accelerometer data
+// Generate control command based on accelerometer data
+void generate_control_command(const AccelerometerData *accel_data, char *command_buffer) {
+    float speed = sqrt(accel_data->x * accel_data->x + accel_data->y * accel_data->y) / 9.81; // Normalize to g-force
+    speed = fmin(speed, 1.0) * 100; // Cap speed to 100%
+
+    if (fabs(accel_data->y) > fabs(accel_data->x)) {
+        snprintf(command_buffer, 50, "turn %s at %.1f%% speed", accel_data->y > 0 ? "left" : "right", speed);
+    } else {
+        snprintf(command_buffer, 50, "move %s at %.1f%% speed", accel_data->x > 0 ? "forward" : "backward", speed);
+    }
+}
+
+
+// TCP client functions
+void tcp_client_err(void *arg, err_t err) {
+    tcp_client_state->connected = false;
+}
+
+err_t tcp_client_poll(void *arg, struct tcp_pcb *tpcb) {
+    return ERR_OK;
+}
+
+err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
+    if (err == ERR_OK) {
+        tcp_client_state->connected = true;
+    }
+    return ERR_OK;
+}
+
+void setup_tcp_client() {
+    tcp_client_state = (TCP_CLIENT_T *)calloc(1, sizeof(TCP_CLIENT_T));
+    ip4addr_aton(SERVER_IP, &tcp_client_state->remote_addr);
+    tcp_client_state->tcp_pcb = tcp_new();
+    tcp_connect(tcp_client_state->tcp_pcb, &tcp_client_state->remote_addr, TCP_PORT, tcp_client_connected);
+}
+
+// Magnetometer task for reading data and sending commands
+void magnetometer_task(__unused void *params) {
+    AccelerometerData accel_data;
+    int16_t raw_ax, raw_ay, raw_az;
+    char command[50];
+
+    // Initialize I2C and GY-511 sensor
+    i2c_init(i2c1, 100 * 1000);
+    gpio_set_function(26, GPIO_FUNC_I2C);
+    gpio_set_function(27, GPIO_FUNC_I2C);
+    gpio_pull_up(26);
+    gpio_pull_up(27);
+    gy511_init(i2c1);
+
+    while (true) {
+        // Read accelerometer data, process, and generate command
+        gy511_read_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
+        process_acceleration(raw_ax, raw_ay, raw_az, &accel_data);
+        generate_control_command(&accel_data, command);
+
+        if (tcp_client_state->connected) {
+            tcp_write(tcp_client_state->tcp_pcb, command, strlen(command), TCP_WRITE_FLAG_COPY);
         }
-        state->tcp_pcb = NULL;
-    }
-    return err;
-}
 
-static err_t tcp_client_sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
-{
-    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
-    state->sent_len += len;
-    return ERR_OK;
-}
-
-static err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
-{
-    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
-    if (err != ERR_OK)
-    {
-        DEBUG_printf("connect failed %d\n", err);
-        return tcp_client_close(arg);
-    }
-    state->connected = true;
-    DEBUG_printf("Connected to server\n");
-
-    return ERR_OK;
-}
-
-static err_t tcp_client_poll(void *arg, struct tcp_pcb *tpcb)
-{
-    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
-
-    // Send "hello" message
-    // CURRENTLY SENDING ONLY "HELLO" MESSAGE
-    // CHANGE HERE FOR SENDING MESSAGE CONTENT
-    const char *message = HELLO_MESSAGE;
-    err_t err = tcp_write(tpcb, message, strlen(message), TCP_WRITE_FLAG_COPY);
-
-    if (err != ERR_OK)
-    {
-        DEBUG_printf("Failed to send 'hello' %d\n", err);
-        return tcp_client_close(arg);
-    }
-    DEBUG_printf("Sent: %s\n", message);
-
-    return ERR_OK;
-}
-
-static void tcp_client_err(void *arg, err_t err)
-{
-    if (err != ERR_ABRT)
-    {
-        DEBUG_printf("tcp_client_err %d\n", err);
-        tcp_client_close(arg);
+        printf("Command: %s\n", command);
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
-static bool tcp_client_open(void *arg)
-{
-    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
-    DEBUG_printf("Connecting to %s port %u\n", ip4addr_ntoa(&state->remote_addr), TCP_PORT);
-    state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr));
-    if (!state->tcp_pcb)
-    {
-        DEBUG_printf("failed to create pcb\n");
-        return false;
-    }
-
-    tcp_arg(state->tcp_pcb, state);
-    tcp_poll(state->tcp_pcb, tcp_client_poll, 2); // Poll every 2 ticks
-    tcp_sent(state->tcp_pcb, tcp_client_sent);
-    tcp_err(state->tcp_pcb, tcp_client_err);
-
-    state->sent_len = 0;
-    state->complete = false;
-
-    // Begin TCP connection to the server
-    cyw43_arch_lwip_begin();
-    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, TCP_PORT, tcp_client_connected);
-    cyw43_arch_lwip_end();
-
-    return err == ERR_OK;
-}
-
-// Perform initialization
-static TCP_CLIENT_T *tcp_client_init(void)
-{
-    TCP_CLIENT_T *state = calloc(1, sizeof(TCP_CLIENT_T));
-    if (!state)
-    {
-        DEBUG_printf("failed to allocate state\n");
-        return NULL;
-    }
-    ip4addr_aton(TEST_TCP_SERVER_IP, &state->remote_addr);
-    return state;
-}
-
-void run_tcp_client_test(void)
-{
-    TCP_CLIENT_T *state = tcp_client_init();
-    if (!state)
-    {
-        return;
-    }
-    if (!tcp_client_open(state))
-    {
-        tcp_client_close(state);
+// WiFi task to initialize WiFi and setup TCP client
+void wifi_task(__unused void *params) {
+    if (cyw43_arch_init()) {
+        printf("CYW43 WiFi initialization failed.\n");
+        vTaskDelete(NULL); // Terminate the task if initialization fails
         return;
     }
 
-    while (!state->complete)
-    {
-        // Wait for 1 second between sends
-        // CHANGE TIMING HERE FOR SENDING MESSAGES
-        sleep_ms(SEND_INTERVAL_MS);
-    }
-    free(state);
-}
-
-void wifi_task(__unused void *params)
-{
-    DEBUG_printf("Initialising WiFi...\n");
-
-    if (cyw43_arch_init())
-    {
-        DEBUG_printf("failed to initialise\n");
-        return;
-    }
     cyw43_arch_enable_sta_mode();
 
-    printf("Connecting to Wi-Fi...\n");
-    int retries = 0;
-    while (retries < 5)
-    {
-        if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000))
-        {
-            printf("Failed to connect. Retrying... (%d/%d)\n", retries + 1, 5);
-            retries++;
-            sleep_ms(1000);
-        }
-        else
-        {
-            printf("Connected.\n");
-            break;
-        }
-    }
-
-    if (retries == 5)
-    {
-        printf("Failed to connect after 5 attempts.\n");
+    if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 10000) != 0) {
+        printf("Wi-Fi connection failed.\n");
+        cyw43_arch_deinit(); // Deinitialize WiFi if connection fails
+        vTaskDelete(NULL);   // Terminate the task
         return;
     }
+    printf("Wi-Fi connected\n");
 
-    printf("Running TCP client test...\n");
-
-    run_tcp_client_test();
-
+    setup_tcp_client();
+    vTaskDelay(pdMS_TO_TICKS(5000));
     cyw43_arch_deinit();
 }
 
-/* A Task that blinks the LED for 3000 ticks continuously */
-// FOR TESTING IF MY WIFI CAN WORK WITH FREERTOS TASKING -felix
-void led_task(__unused void *params)
-{
-    while (true)
-    {
-        vTaskDelay(500);
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        vTaskDelay(500);
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-    }
-}
-
-void vLaunch(void)
-{
-    // Create tasks
-    // Create your tasks here
-    // WIFI TASK SHOULD ALWAYS BE LAST, AS IT WILL BLOCK THE OTHER TASKS (CHANGE WIFITASK PRIORITY TO MAKE SURE IT IS LAST)
-
-    TaskHandle_t ledtask;
-    xTaskCreate(led_task, "TestLedThread", 256, NULL, 1, &ledtask);
-
-    TaskHandle_t wifitask;
-    xTaskCreate(wifi_task, "TestLedThread", 256, NULL, 2, &wifitask);
-
-    /* Start the tasks and timer running. */
+void vLaunch(void) {
+    xTaskCreate(magnetometer_task, "MagnetometerTask", 256, NULL, 1, NULL);
+    xTaskCreate(wifi_task, "WiFiTask", 256, NULL, 2, NULL);
     vTaskStartScheduler();
 }
 
-int main()
-{
+int main() {
     stdio_init_all();
-
-    while (!stdio_usb_connected())
-        sleep_ms(100);
-
-    printf("Starting PICO!\n");
-    printf("Starting WiFi...\n");
-
+    while (!stdio_usb_connected()) {
+        tight_loop_contents();
+    }
+    printf("Starting system\n");
     vLaunch();
-
     return 0;
 }

@@ -1,101 +1,121 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
-#include "magnetometer.h"  // Include your header file
+#include <stdio.h>
+#include <math.h>
 
-#define MAG_ADDR 0x1E         // I2C address for the magnetometer
-#define I2C_SPEED 400         // I2C clock speed in kHz
-#define POLLING_DELAY 1080    // Time between sensor readings (ms)
-#define SDA_PIN 14            // I2C SDA pin (adjustable)
-#define SCL_PIN 15            // I2C SCL pin (adjustable)
-#define I2C_INSTANCE i2c1     // Using I2C1 peripheral
+// Define constants
+#define ACCEL_I2C_ADDR 0x19  // Accelerometer address
+#define MAG_I2C_ADDR 0x1E    // Magnetometer address
+#define CTRL_REG1_A 0x20     // Accelerometer control register
+#define CTRL_REG1_M 0x00     // Magnetometer control register (CRA_REG_M)
+#define OUT_X_L_A 0x28       // Accelerometer data register
+#define OUT_X_H_M 0x03       // Magnetometer data register (OUT_X_H_M)
+#define CTRL_REG4_A 0x23
 
-// Magnetometer registers
-#define MAG_CONFIG_A 0x00     // Config Register A
-#define MAG_CONFIG_B 0x01     // Config Register B
-#define MAG_MODE_REG 0x02     // Mode Register
-#define MAG_DATA_START 0x03   // Starting address of data output (X MSB)
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
-// I2C initialization
-void setup_i2c() {
-    i2c_init(I2C_INSTANCE, I2C_SPEED * 1000);  // Initialize I2C peripheral
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(SDA_PIN);   // Enable pull-up resistors
-    gpio_pull_up(SCL_PIN);
+// Define conversion constants
+#define ACCEL_CONVERSION 0.00059841  // Conversion factor for ±2g mode (m/s²/LSB)
+
+// Function to initialize the GY-511 sensor (accelerometer and magnetometer)
+void gy511_init(i2c_inst_t *i2c) {
+    uint8_t buf[2];
+
+    // Initialize accelerometer (CTRL_REG1_A)
+    buf[0] = CTRL_REG1_A;
+    buf[1] = 0x57;  // Enable accelerometer, 100Hz data rate, all axes enabled
+    i2c_write_blocking(i2c, ACCEL_I2C_ADDR, buf, 2, false);
+
+    // Initialize magnetometer (CRA_REG_M)
+    buf[0] = CTRL_REG1_M;  // CRA_REG_M
+    buf[1] = 0x1C;         // Temp sensor disable, 220Hz output rate
+    i2c_write_blocking(i2c, MAG_I2C_ADDR, buf, 2, false);
+
+    // Initialize magnetometer mode (MR_REG_M)
+    buf[0] = 0x02;         // MR_REG_M
+    buf[1] = 0x00;         // Continuous conversion mode
+    i2c_write_blocking(i2c, MAG_I2C_ADDR, buf, 2, false);
 }
 
-// Magnetometer initialization
-void setup_magnetometer() {
-    uint8_t config_data[2];
+// Function to read raw accelerometer data (16-bit integers)
+void gy511_read_raw_acceleration(i2c_inst_t *i2c, int16_t *raw_ax, int16_t *raw_ay, int16_t *raw_az) {
+    uint8_t buf[6];
+    i2c_write_blocking(i2c, ACCEL_I2C_ADDR, (uint8_t[]){OUT_X_L_A | 0x80}, 1, true);  // MSB set for auto-increment
+    i2c_read_blocking(i2c, ACCEL_I2C_ADDR, buf, 6, false);
 
-    // Set refresh rate to 15 Hz
-    config_data[0] = MAG_CONFIG_A;
-    config_data[1] = 0x70;  // 15 Hz refresh rate
-    i2c_write_blocking(I2C_INSTANCE, MAG_ADDR, config_data, 2, false);
-
-    // Set gain for +/- 8.1 Gauss sensitivity
-    config_data[0] = MAG_CONFIG_B;
-    config_data[1] = 0xE0;
-    i2c_write_blocking(I2C_INSTANCE, MAG_ADDR, config_data, 2, false);
-
-    // Set mode to continuous reading
-    config_data[0] = MAG_MODE_REG;
-    config_data[1] = 0x00;
-    i2c_write_blocking(I2C_INSTANCE, MAG_ADDR, config_data, 2, false);
+    *raw_ax = (int16_t)(buf[1] << 8 | buf[0]);
+    *raw_ay = (int16_t)(buf[3] << 8 | buf[2]);
+    *raw_az = (int16_t)(buf[5] << 8 | buf[4]);
 }
 
-// Fetch raw magnetometer data
-void fetch_magnetometer_data(magnetometer_data_t *mag) {
-    uint8_t raw_data[6];    // Buffer to hold raw data
-    int16_t raw_values[3];  // Array for X, Y, Z data
+// Function to read raw magnetometer data (16-bit integers)
+void gy511_read_raw_magnetometer(i2c_inst_t *i2c, int16_t *raw_mx, int16_t *raw_my, int16_t *raw_mz) {
+    uint8_t buf[6];
+    i2c_write_blocking(i2c, MAG_I2C_ADDR, (uint8_t[]){OUT_X_H_M | 0x80}, 1, true);  // MSB set for auto-increment
+    i2c_read_blocking(i2c, MAG_I2C_ADDR, buf, 6, false);
 
-    // Point to data register
-    uint8_t reg_pointer = MAG_DATA_START;
-    i2c_write_blocking(I2C_INSTANCE, MAG_ADDR, &reg_pointer, 1, true);
-
-    // Read 6 bytes of data (X MSB -> Z LSB)
-    i2c_read_blocking(I2C_INSTANCE, MAG_ADDR, raw_data, 6, false);
-
-    // Combine high and low bytes to get 16-bit signed values for X, Y, Z
-    for (int i = 0; i < 3; i++) {
-        raw_values[i] = (raw_data[i * 2] << 8) | raw_data[(i * 2) + 1];
-    }
-
-    mag->axis_x = raw_values[0];
-    mag->axis_y = raw_values[1];
-    mag->axis_z = raw_values[2];
+    // Magnetometer has different endianness; correct order of bytes
+    *raw_mx = (int16_t)(buf[0] << 8 | buf[1]);
+    *raw_my = (int16_t)(buf[2] << 8 | buf[3]);
+    *raw_mz = (int16_t)(buf[4] << 8 | buf[5]);
 }
 
-// Calculate the heading angle using magnetometer data
-int32_t calculate_heading(magnetometer_data_t *mag) {
-    int32_t heading = atan2(mag->axis_y, mag->axis_x) * 180.0 / M_PI;
+// Function to calculate the heading (direction in degrees)
+float calculate_heading(int16_t raw_mx, int16_t raw_my) {
+    float heading = atan2((float)raw_my, (float)raw_mx) * (180.0 / M_PI);  // Convert radians to degrees
     if (heading < 0) {
-        heading += 360;  // Normalize angle to [0, 360)
+        heading += 360;  // Ensure heading is positive
     }
     return heading;
 }
 
+// Function to convert raw accelerometer data to m/s²
+void convert_acceleration_to_mps2(int16_t raw_ax, int16_t raw_ay, int16_t raw_az, float *ax_mps2, float *ay_mps2, float *az_mps2) {
+    *ax_mps2 = raw_ax * ACCEL_CONVERSION;
+    *ay_mps2 = raw_ay * ACCEL_CONVERSION;
+    *az_mps2 = raw_az * ACCEL_CONVERSION;
+}
+
 int main() {
-    // Setup
     stdio_init_all();
-    setup_i2c();
-    setup_magnetometer();
 
-    magnetometer_data_t mag_data;
+    // Wait for USB serial connection to be established
+    while (!stdio_usb_connected()) {
+        tight_loop_contents();  // Wait until USB is connected
+    }
 
-    // Loop to continuously fetch and display magnetometer data
-    while (true) {
-        fetch_magnetometer_data(&mag_data);
-        int32_t heading_angle = calculate_heading(&mag_data);
+    // Initialize I2C on I2C1 (GP26 SDA, GP27 SCL)
+    i2c_init(i2c1, 100 * 1000);  // 100kHz clock speed
+    gpio_set_function(26, GPIO_FUNC_I2C);
+    gpio_set_function(27, GPIO_FUNC_I2C);
+    gpio_pull_up(26);
+    gpio_pull_up(27);
 
-        // Output the raw X, Y, Z magnetometer values and calculated heading
-        printf("\nMagnetometer Data:\nX = %4d\nY = %4d\nZ = %4d\n", mag_data.axis_x, mag_data.axis_y, mag_data.axis_z);
-        printf("Heading Angle: %d degrees\n", heading_angle);
+    gy511_init(i2c1);  // Initialize the GY-511 sensor
 
-        sleep_ms(POLLING_DELAY);  // Delay between readings
+    int16_t raw_ax, raw_ay, raw_az;
+    int16_t raw_mx, raw_my, raw_mz;
+    float ax_mps2, ay_mps2, az_mps2;
+
+    while (1) {
+        // Read raw acceleration data
+        gy511_read_raw_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
+        // Convert raw acceleration to m/s²
+        convert_acceleration_to_mps2(raw_ax, raw_ay, raw_az, &ax_mps2, &ay_mps2, &az_mps2);
+
+        // Read raw magnetometer data
+        gy511_read_raw_magnetometer(i2c1, &raw_mx, &raw_my, &raw_mz);
+        float heading = calculate_heading(raw_mx, raw_my);
+
+        // Output the raw acceleration, converted acceleration (m/s²), and magnetometer values along with heading
+        printf("Raw Acceleration - X: %d | Y: %d | Z: %d\n", raw_ax, raw_ay, raw_az);
+        printf("Converted Acceleration (m/s²) - X: %.4f | Y: %.4f | Z: %.4f\n", ax_mps2, ay_mps2, az_mps2);
+        printf("Raw Magnetometer - X: %d | Y: %d | Z: %d | Heading: %.2f°\n", raw_mx, raw_my, raw_mz, heading);
+
+        // Delay for 100ms
+        sleep_ms(100);
     }
 
     return 0;

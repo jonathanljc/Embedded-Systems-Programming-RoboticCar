@@ -37,6 +37,7 @@ target_link_libraries(remote
         pico_stdlib
         FreeRTOS-Kernel-Heap4
         hardware_adc
+        hardware_i2c
 )
 
 pico_add_extra_outputs(remote)

@@ -4,7 +4,8 @@ add_executable(magnetometer
 
 # pull in common dependencies and additional pwm hardware support
 target_link_libraries(magnetometer 
-        pico_stdlib 
+        pico_stdlib
+        FreeRTOS-Kernel-Heap4 
         hardware_i2c)
 
 # enable usb output, disable uart output
