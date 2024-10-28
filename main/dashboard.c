@@ -27,7 +27,6 @@ typedef struct TCP_SERVER_T_
 } TCP_SERVER_T;
 
 static void tcp_server_err(void *arg, err_t err);
-static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 static err_t tcp_server_send_data(void *arg, struct tcp_pcb *tpcb);
 static err_t tcp_server_close(void *arg);
 static bool tcp_server_open(TCP_SERVER_T *state);
@@ -115,19 +114,6 @@ static void tcp_server_err(void *arg, err_t err)
     }
 }
 
-err_t tcp_server_send_data(void *arg, struct tcp_pcb *tpcb)
-{
-    TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
-
-    cyw43_arch_lwip_check();
-    const char *welcomeMessage = "Welcome Client";
-    err_t err = tcp_write(tpcb, welcomeMessage, strlen(welcomeMessage), TCP_WRITE_FLAG_COPY);
-    if (err != ERR_OK) {
-        DEBUG_printf("Failed to write data %d\n", err);
-        return false;
-    }
-    return ERR_OK;
-}
 
 static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
 {
@@ -145,7 +131,7 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     tcp_recv(client_pcb, tcp_server_recv);
     tcp_err(client_pcb, tcp_server_err);
 
-    return tcp_server_send_data(arg, state->client_pcb);
+    return ERR_OK;
 }
 
 static bool tcp_server_open(TCP_SERVER_T *state)

@@ -1,0 +1,259 @@
+/**
+ * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include <string.h>
+#include <time.h>
+
+#include "pico/stdlib.h"
+#include "pico/cyw43_arch.h"
+
+#include "lwip/pbuf.h"
+#include "lwip/tcp.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "hardware/gpio.h"
+#include "hardware/adc.h"
+
+#define WIFI_SSID "Felix-iPhone"
+#define WIFI_PASSWORD "felixfelix"
+#define TEST_TCP_SERVER_IP "192.168.1.3"
+#define TCP_PORT 4242
+#define DEBUG_printf printf
+#define BUF_SIZE 2048
+
+#define HELLO_MESSAGE "hello"
+#define SEND_INTERVAL_MS 1000 // 1 second
+
+typedef struct TCP_CLIENT_T_
+{
+    struct tcp_pcb *tcp_pcb;
+    ip_addr_t remote_addr;
+    int sent_len;
+    bool complete;
+    bool connected;
+    int recv_len;
+} TCP_CLIENT_T;
+
+static err_t tcp_client_close(void *arg)
+{
+    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
+    err_t err = ERR_OK;
+    if (state->tcp_pcb != NULL)
+    {
+        tcp_arg(state->tcp_pcb, NULL);
+        tcp_sent(state->tcp_pcb, NULL);
+        tcp_recv(state->tcp_pcb, NULL);
+        tcp_err(state->tcp_pcb, NULL);
+        err = tcp_close(state->tcp_pcb);
+        if (err != ERR_OK)
+        {
+            DEBUG_printf("close failed %d, calling abort\n", err);
+            tcp_abort(state->tcp_pcb);
+            err = ERR_ABRT;
+        }
+        state->tcp_pcb = NULL;
+    }
+    return err;
+}
+
+static err_t tcp_client_sent(void *arg, struct tcp_pcb *tpcb, u16_t len)
+{
+    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
+    state->sent_len += len;
+    return ERR_OK;
+}
+
+static err_t tcp_client_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
+{
+    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
+    if (err != ERR_OK)
+    {
+        DEBUG_printf("connect failed %d\n", err);
+        return tcp_client_close(arg);
+    }
+    state->connected = true;
+    DEBUG_printf("Connected to server\n");
+
+    return ERR_OK;
+}
+
+static err_t tcp_client_poll(void *arg, struct tcp_pcb *tpcb)
+{
+    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
+
+    // Send "hello" message
+    // CURRENTLY SENDING ONLY "HELLO" MESSAGE
+    // CHANGE HERE FOR SENDING MESSAGE CONTENT
+    const char *message = HELLO_MESSAGE;
+    err_t err = tcp_write(tpcb, message, strlen(message), TCP_WRITE_FLAG_COPY);
+
+    if (err != ERR_OK)
+    {
+        DEBUG_printf("Failed to send 'hello' %d\n", err);
+        return tcp_client_close(arg);
+    }
+    DEBUG_printf("Sent: %s\n", message);
+
+    return ERR_OK;
+}
+
+static void tcp_client_err(void *arg, err_t err)
+{
+    if (err != ERR_ABRT)
+    {
+        DEBUG_printf("tcp_client_err %d\n", err);
+        tcp_client_close(arg);
+    }
+}
+
+static bool tcp_client_open(void *arg)
+{
+    TCP_CLIENT_T *state = (TCP_CLIENT_T *)arg;
+    DEBUG_printf("Connecting to %s port %u\n", ip4addr_ntoa(&state->remote_addr), TCP_PORT);
+    state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr));
+    if (!state->tcp_pcb)
+    {
+        DEBUG_printf("failed to create pcb\n");
+        return false;
+    }
+
+    tcp_arg(state->tcp_pcb, state);
+    tcp_poll(state->tcp_pcb, tcp_client_poll, 2); // Poll every 2 ticks
+    tcp_sent(state->tcp_pcb, tcp_client_sent);
+    tcp_err(state->tcp_pcb, tcp_client_err);
+
+    state->sent_len = 0;
+    state->complete = false;
+
+    // Begin TCP connection to the server
+    cyw43_arch_lwip_begin();
+    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, TCP_PORT, tcp_client_connected);
+    cyw43_arch_lwip_end();
+
+    return err == ERR_OK;
+}
+
+// Perform initialization
+static TCP_CLIENT_T *tcp_client_init(void)
+{
+    TCP_CLIENT_T *state = calloc(1, sizeof(TCP_CLIENT_T));
+    if (!state)
+    {
+        DEBUG_printf("failed to allocate state\n");
+        return NULL;
+    }
+    ip4addr_aton(TEST_TCP_SERVER_IP, &state->remote_addr);
+    return state;
+}
+
+void run_tcp_client_test(void)
+{
+    TCP_CLIENT_T *state = tcp_client_init();
+    if (!state)
+    {
+        return;
+    }
+    if (!tcp_client_open(state))
+    {
+        tcp_client_close(state);
+        return;
+    }
+
+    while (!state->complete)
+    {
+        // Wait for 1 second between sends
+        // CHANGE TIMING HERE FOR SENDING MESSAGES
+        sleep_ms(SEND_INTERVAL_MS);
+    }
+    free(state);
+}
+
+void wifi_task(__unused void *params)
+{
+    DEBUG_printf("Initialising WiFi...\n");
+
+    if (cyw43_arch_init())
+    {
+        DEBUG_printf("failed to initialise\n");
+        return;
+    }
+    cyw43_arch_enable_sta_mode();
+
+    printf("Connecting to Wi-Fi...\n");
+    int retries = 0;
+    while (retries < 5)
+    {
+        if (cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 30000))
+        {
+            printf("Failed to connect. Retrying... (%d/%d)\n", retries + 1, 5);
+            retries++;
+            sleep_ms(1000);
+        }
+        else
+        {
+            printf("Connected.\n");
+            break;
+        }
+    }
+
+    if (retries == 5)
+    {
+        printf("Failed to connect after 5 attempts.\n");
+        return;
+    }
+
+    printf("Running TCP client test...\n");
+
+    run_tcp_client_test();
+
+    cyw43_arch_deinit();
+}
+
+/* A Task that blinks the LED for 3000 ticks continuously */
+// FOR TESTING IF MY WIFI CAN WORK WITH FREERTOS TASKING -felix
+void led_task(__unused void *params)
+{
+    while (true)
+    {
+        vTaskDelay(500);
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+        vTaskDelay(500);
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+    }
+}
+
+void vLaunch(void)
+{
+    // Create tasks
+    // Create your tasks here
+    // WIFI TASK SHOULD ALWAYS BE LAST, AS IT WILL BLOCK THE OTHER TASKS (CHANGE WIFITASK PRIORITY TO MAKE SURE IT IS LAST)
+
+    TaskHandle_t ledtask;
+    xTaskCreate(led_task, "TestLedThread", 256, NULL, 1, &ledtask);
+
+    TaskHandle_t wifitask;
+    xTaskCreate(wifi_task, "TestLedThread", 256, NULL, 2, &wifitask);
+
+    /* Start the tasks and timer running. */
+    vTaskStartScheduler();
+}
+
+int main()
+{
+    stdio_init_all();
+
+    while (!stdio_usb_connected())
+        sleep_ms(100);
+
+    printf("Starting PICO!\n");
+    printf("Starting WiFi...\n");
+
+    vLaunch();
+
+    return 0;
+}

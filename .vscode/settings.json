@@ -29,6 +29,7 @@
     "err.h": "c",
     "dhcp.h": "c",
     "stdio.h": "c",
-    "string": "c"
+    "string": "c",
+    "adc.h": "c"
   }
 }
