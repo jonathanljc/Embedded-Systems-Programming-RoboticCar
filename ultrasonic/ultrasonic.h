@@ -41,8 +41,6 @@ typedef struct kalman_state_
 kalman_state *kalman_init(double q, double r, double p, double initial_value);
 void get_echo_pulse(uint gpio, uint32_t events);
 void kalman_update(kalman_state *state, double measurement);
-uint64_t getPulse();
-double getCm(kalman_state *state);
 void ultrasonic_task(void *pvParameters);
 void print_task(void *pvParameters);
 void setupUltrasonicPins();
