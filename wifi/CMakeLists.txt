@@ -1,5 +1,5 @@
 add_library(wifi_lib
-        MQTTClient.c
+        wifi.c
 )
 
 target_include_directories(wifi_lib PRIVATE
@@ -21,4 +21,4 @@ target_link_libraries(wifi_lib
         FreeRTOS-Kernel-Heap4
 )
 
-pico_enable_stdio_usb(encoder_lib 1)
+pico_enable_stdio_usb(wifi_lib 1)

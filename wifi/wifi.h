@@ -21,12 +21,15 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "message_buffer.h"
 
 // MQTT Definitions
-#define MQTT_SERVER_IP "5.196.78.28"
+#define MQTT_SERVER_IP "172.20.10.12"
 #define MQTT_SERVER_PORT 1883
 
 #define DEBUG_printf printf
+
+extern MessageBufferHandle_t printMessageBuffer;
 
 typedef struct {
     ip_addr_t remote_addr;
@@ -37,5 +40,6 @@ typedef struct {
 } MQTT_CLIENT_T;
 
 void main_task(void *pvParameters);
+void publish_to_topic(const char *topic, const char *message);
 
 #endif

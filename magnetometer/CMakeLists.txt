@@ -30,3 +30,17 @@ target_link_libraries(magnetometer_lib
 
 # create map/bin/hex file etc.
 pico_enable_stdio_usb(magnetometer_lib 1)
+
+# for accelerometer library
+add_library(accelerometer_lib
+        accelerometer.c
+)
+
+target_link_libraries(accelerometer_lib
+    pico_stdlib
+    FreeRTOS-Kernel-Heap4
+    hardware_adc
+    hardware_i2c
+)
+
+pico_enable_stdio_usb(accelerometer_lib 1)

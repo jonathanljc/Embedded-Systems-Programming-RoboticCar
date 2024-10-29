@@ -33,7 +33,8 @@
     "adc.h": "c",
     "ultrasonic.h": "c",
     "freertos.h": "c",
-    "mqttclient.h": "c",
-    "encoder.h": "c"
+    "wifi.h": "c",
+    "encoder.h": "c",
+    "ip4_addr.h": "c"
   }
 }

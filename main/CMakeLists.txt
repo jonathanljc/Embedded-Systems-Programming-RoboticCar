@@ -6,11 +6,18 @@ add_executable(dashboard
 target_include_directories(dashboard PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
+        ${CMAKE_SOURCE_DIR}/wifi
+)
+
+target_compile_definitions(dashboard PRIVATE
+        NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
+        LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
+        LWIP_MQTT=1
+        LWIP_TCP=1
 )
 
 target_link_libraries(dashboard
-        pico_cyw43_arch_lwip_threadsafe_background
-        pico_stdlib
+        wifi_lib
 )
 
 pico_add_extra_outputs(dashboard)
@@ -79,6 +86,7 @@ target_include_directories(remote2 PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
         ${CMAKE_SOURCE_DIR}/wifi
+        ${CMAKE_SOURCE_DIR}/magnetometer
 )
 
 target_compile_definitions(remote2 PRIVATE
@@ -90,6 +98,7 @@ target_compile_definitions(remote2 PRIVATE
 
 target_link_libraries(remote2
         wifi_lib
+        accelerometer_lib
 )
 
 pico_add_extra_outputs(remote2)
