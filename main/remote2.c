@@ -10,7 +10,7 @@ int main()
     stdio_init_all();
     sleep_ms(5000); // Delay to ensure USB console is ready
     
-    printMessageBuffer = xMessageBufferCreate(256);
+    printMessageBuffer = xMessageBufferCreate(1024);
 
     xTaskCreate(magnetometer_task, "MagnetometerTask", 256, NULL, 1, NULL);
     xTaskCreate(main_task, "WifiTask", 256, "remote", 2, NULL);

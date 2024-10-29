@@ -55,9 +55,9 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
 
 void mqtt_pub_request_cb(void *arg, err_t err)
 {
-    mqtt_state = (MQTT_CLIENT_T *)arg;
-    // DEBUG_printf("mqtt_pub_request_cb: err %d\n", err);
-    mqtt_state->received++;
+    // mqtt_state = (MQTT_CLIENT_T *)arg;
+    // // DEBUG_printf("mqtt_pub_request_cb: err %d\n", err);
+    // mqtt_state->received++;
 }
 
 void mqtt_sub_request_cb(void *arg, err_t err)
@@ -151,7 +151,7 @@ void subscribe_to_topic(const char *topic)
 void publish_to_topic(const char *topic, const char *message)
 {
     err_t err;
-    // cyw43_arch_lwip_begin();
+    cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
         err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), 0, 0, mqtt_pub_request_cb, 0);
@@ -160,7 +160,7 @@ void publish_to_topic(const char *topic, const char *message)
     {
         err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/remote", message, strlen(message), 0, 0, mqtt_pub_request_cb, 0);
     }
-    // cyw43_arch_lwip_end();
+    cyw43_arch_lwip_end();
 
     if (err != ERR_OK)
     {
@@ -170,6 +170,7 @@ void publish_to_topic(const char *topic, const char *message)
     {
         DEBUG_printf("Published %s\n", message);
     }
+    return;
 }
 
 void main_task(void *pvParameters)
@@ -218,7 +219,7 @@ void main_task(void *pvParameters)
         if (mqtt_client_is_connected(mqtt_state->mqtt_client))
         {
             cyw43_arch_lwip_begin();
-            printf("CALLED WIFI BEGIN\n");
+            // printf("CALLED WIFI BEGIN\n");
 
             if (!subscribed)
             {
@@ -226,12 +227,14 @@ void main_task(void *pvParameters)
                 subscribed = true;
             }
 
-            if(strcmp(topic, "remote") == 0){
+            if (strcmp(topic, "remote") == 0)
+            {
                 char command[50];
-                if (xMessageBufferReceive(printMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0){
+                if (xMessageBufferReceive(printMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)
+                {
                     publish_to_topic(topic, command);
-                    vTaskDelay(pdMS_TO_TICKS(1000));
-            }
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                }
             }
 
             // if (strcmp(topic, "car") == 0)
@@ -245,6 +248,11 @@ void main_task(void *pvParameters)
             //     vTaskDelay(pdMS_TO_TICKS(50));
             // }
             cyw43_arch_lwip_end();
+        }
+        else
+        {
+            printf("MQTT not connected\n");
+            mqtt_test_connect(mqtt_state);
         }
     }
 

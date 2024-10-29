@@ -25,6 +25,7 @@
 
 // MQTT Definitions
 #define MQTT_SERVER_IP "172.20.10.12"
+// #define MQTT_SERVER_IP "5.196.78.28"
 #define MQTT_SERVER_PORT 1883
 
 #define DEBUG_printf printf

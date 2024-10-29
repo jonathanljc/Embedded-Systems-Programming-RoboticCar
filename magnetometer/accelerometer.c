@@ -92,9 +92,11 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
 // Magnetometer task for reading data and sending commands
 void magnetometer_task(__unused void *params)
 {
+    vTaskDelay(pdMS_TO_TICKS(5000));
     AccelerometerData accel_data;
     int16_t raw_ax, raw_ay, raw_az;
     char command[50];
+    int counterPrint = 0;
 
     // Initialize I2C and GY-511 sensor
     // i2c_init(i2c1, 100 * 1000);
@@ -110,13 +112,13 @@ void magnetometer_task(__unused void *params)
         // gy511_read_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
         // process_acceleration(raw_ax, raw_ay, raw_az, &accel_data);
         // generate_control_command(&accel_data, command);
-        strcpy(command, "move forward at 50% speed\n");
+        snprintf(command, 50, "move forward at 25 %d\n", counterPrint);
 
         // Put command into buffer for wifi
         xMessageBufferSend(printMessageBuffer, &command, sizeof(command), 0);
 
-
         printf("Command: %s\n", command);
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(200));
+        counterPrint++;
     }
 }
