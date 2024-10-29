@@ -67,3 +67,28 @@ target_link_libraries(car
 pico_add_extra_outputs(car)
 pico_enable_stdio_usb(car 1)
 pico_enable_stdio_uart(car 1)
+
+# Remote2 executable
+add_executable(remote2
+        remote2.c
+)
+
+target_include_directories(remote2 PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
+        ${CMAKE_SOURCE_DIR}/wifi
+)
+
+target_compile_definitions(remote2 PRIVATE
+        NO_SYS=0            # don't want NO_SYS (generally this would be in your lwipopts.h)
+        LWIP_SOCKET=1       # we need the socket API (generally this would be in your lwipopts.h)
+        LWIP_MQTT=1
+        LWIP_TCP=1
+)
+
+target_link_libraries(remote2
+        wifi_lib
+)
+
+pico_add_extra_outputs(remote2)
+pico_enable_stdio_usb(remote2 1)

@@ -31,6 +31,9 @@
     "stdio.h": "c",
     "string": "c",
     "adc.h": "c",
-    "ultrasonic.h": "c"
+    "ultrasonic.h": "c",
+    "freertos.h": "c",
+    "mqttclient.h": "c",
+    "encoder.h": "c"
   }
 }
