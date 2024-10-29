@@ -51,6 +51,7 @@
 #define LWIP_NETIF_TX_SINGLE_PBUF   1
 #define DHCP_DOES_ARP_CHECK         0
 #define LWIP_DHCP_DOES_ACD_CHECK    0
+#define LWIP_MQTT                   1
 
 #ifndef NDEBUG
 #define LWIP_DEBUG                  1
@@ -87,4 +88,9 @@
 #define SLIP_DEBUG                  LWIP_DBG_OFF
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 
+#define LWIP_ALTCP 1
+#define LWIP_ALTCP_TLS 0
+#define LWIP_ALTCP_TLS_MBEDTLS 0
+#define MEMP_NUM_SYS_TIMEOUT LWIP_NUM_SYS_TIMEOUT_INTERNAL + 5
+#define MEMP_NUM_TCP_PCB 12
 #endif /* __LWIPOPTS_H__ */
