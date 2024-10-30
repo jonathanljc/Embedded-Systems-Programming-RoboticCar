@@ -11,6 +11,12 @@ target_link_libraries(motor_lib
     hardware_timer       # Timer control
     FreeRTOS-Kernel      # FreeRTOS kernel
     FreeRTOS-Kernel-Heap4  # FreeRTOS heap
+    encoder_lib
+)
+
+# Add include directories
+target_include_directories(motor_lib PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/../encoder
 )
 
 # create map/bin/hex file etc.
