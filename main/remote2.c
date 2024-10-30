@@ -2,7 +2,7 @@
 #include "accelerometer.h"
 
 // Define the global message buffer
-MessageBufferHandle_t printMessageBuffer;
+MessageBufferHandle_t wifiMessageBuffer;
 
 int main()
 {
@@ -10,11 +10,11 @@ int main()
     stdio_init_all();
     sleep_ms(5000); // Delay to ensure USB console is ready
     
-    printMessageBuffer = xMessageBufferCreate(1024);
+    wifiMessageBuffer = xMessageBufferCreate(1024);
 
     xTaskCreate(magnetometer_task, "MagnetometerTask", 256, NULL, 1, NULL);
     xTaskCreate(main_task, "WifiTask", 256, "remote", 2, NULL);
-    if (printMessageBuffer == NULL)
+    if (wifiMessageBuffer == NULL)
     {
         printf("Failed to create message buffer\n");
         return 1;

@@ -99,23 +99,23 @@ void magnetometer_task(__unused void *params)
     int counterPrint = 0;
 
     // Initialize I2C and GY-511 sensor
-    // i2c_init(i2c1, 100 * 1000);
-    // gpio_set_function(26, GPIO_FUNC_I2C);
-    // gpio_set_function(27, GPIO_FUNC_I2C);
-    // gpio_pull_up(26);
-    // gpio_pull_up(27);
-    // gy511_init(i2c1);
+    i2c_init(i2c1, 100 * 1000);
+    gpio_set_function(26, GPIO_FUNC_I2C);
+    gpio_set_function(27, GPIO_FUNC_I2C);
+    gpio_pull_up(26);
+    gpio_pull_up(27);
+    gy511_init(i2c1);
 
     while (true)
     {
         // Read accelerometer data, process, and generate command
-        // gy511_read_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
-        // process_acceleration(raw_ax, raw_ay, raw_az, &accel_data);
-        // generate_control_command(&accel_data, command);
-        snprintf(command, 50, "move forward at 25 %d\n", counterPrint);
+        gy511_read_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
+        process_acceleration(raw_ax, raw_ay, raw_az, &accel_data);
+        generate_control_command(&accel_data, command);
+        // snprintf(command, 50, "move forward at 25 %d\n", counterPrint);
 
         // Put command into buffer for wifi
-        xMessageBufferSend(printMessageBuffer, &command, sizeof(command), 0);
+        xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
 
         printf("Command: %s\n", command);
         vTaskDelay(pdMS_TO_TICKS(200));

@@ -11,7 +11,7 @@
 #include "task.h"
 #include "message_buffer.h"
 
-extern MessageBufferHandle_t printMessageBuffer;
+extern MessageBufferHandle_t wifiMessageBuffer;
 
 void magnetometer_task(__unused void *params);
 

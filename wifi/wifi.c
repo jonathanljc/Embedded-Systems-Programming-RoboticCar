@@ -96,21 +96,27 @@ err_t mqtt_test_publish(MQTT_CLIENT_T *mqtt_state)
     return err;
 }
 
-err_t mqtt_test_connect(MQTT_CLIENT_T *mqtt_state)
+err_t mqtt_test_connect(MQTT_CLIENT_T *mqtt_state, const char *topic)
 {
     struct mqtt_connect_client_info_t ci;
     err_t err;
 
     memset(&ci, 0, sizeof(ci));
 
-    ci.client_id = "PicoW";
+    if (strcmp(topic, "car") == 0){
+        ci.client_id = "PicoWP1CCar";
+    }else if (strcmp(topic, "remote") == 0){
+        ci.client_id = "PicoWP1CRemote";
+    }else if (strcmp(topic, "dashboard") == 0){
+        ci.client_id = "PicoWP1CDashboard";
+    }
     ci.client_user = NULL;
     ci.client_pass = NULL;
     ci.keep_alive = 0;
     ci.will_topic = NULL;
     ci.will_msg = NULL;
     ci.will_retain = 0;
-    ci.will_qos = 0;
+    ci.will_qos = 1;
 
     const struct mqtt_connect_client_info_t *client_info = &ci;
 
@@ -136,16 +142,18 @@ void mqtt_run_test(MQTT_CLIENT_T *mqtt_statee)
 
 void subscribe_to_topic(const char *topic)
 {
+    cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
-        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/remote", 0, mqtt_sub_request_cb, 0, 1);
+        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/remote", 1, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/remote\n");
     }
     else if (strcmp(topic, "dashboard") == 0)
     {
-        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/car", 0, mqtt_sub_request_cb, 0, 1);
+        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/car", 1, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/car\n");
     }
+    cyw43_arch_lwip_end();
 }
 
 void publish_to_topic(const char *topic, const char *message)
@@ -154,11 +162,11 @@ void publish_to_topic(const char *topic, const char *message)
     cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), 0, 0, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), 1, 1, mqtt_pub_request_cb, 0);
     }
     else if (strcmp(topic, "remote") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/remote", message, strlen(message), 0, 0, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), 1, 1, mqtt_pub_request_cb, 0);
     }
     cyw43_arch_lwip_end();
 
@@ -203,7 +211,7 @@ void main_task(void *pvParameters)
         return;
     }
 
-    while (mqtt_test_connect(mqtt_state) != ERR_OK)
+    while (mqtt_test_connect(mqtt_state, topic) != ERR_OK)
     {
         printf("attempting to connect...... \n");
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -230,7 +238,7 @@ void main_task(void *pvParameters)
             if (strcmp(topic, "remote") == 0)
             {
                 char command[50];
-                if (xMessageBufferReceive(printMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)
+                if (xMessageBufferReceive(wifiMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)
                 {
                     publish_to_topic(topic, command);
                     vTaskDelay(pdMS_TO_TICKS(100));
@@ -251,8 +259,10 @@ void main_task(void *pvParameters)
         }
         else
         {
+            subscribed = false;
             printf("MQTT not connected\n");
-            mqtt_test_connect(mqtt_state);
+            mqtt_test_connect(mqtt_state, topic);
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
     }
 
