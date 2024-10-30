@@ -1,8 +1,11 @@
 #include "irsensor.h"
+#include "wifi.h"
 
 uint32_t pulse_start = 0;
 uint32_t pulse_end = 0;
 bool is_black = false;
+
+MessageBufferHandle_t wifiMessageBuffer;
 
 void init_adc() {
     adc_init();
@@ -27,6 +30,10 @@ void ir_sensor_task(void *pvParameters) {
         int ir_value = read_ir_sensor();
 
         printf("ADC Value: %d - ", ir_value);
+        
+        char message[50];
+        sniprintf(message, sizeof(message), "ADC Value: %d", ir_value);
+        xMessageBufferSend(wifiMessageBuffer, &message, sizeof(message), 0);
 
         if (ir_value <= WHITE_THRESHOLD) {
             printf("White Surface Detected\n");
@@ -58,8 +65,12 @@ void ir_sensor_task(void *pvParameters) {
 
 int main() {
     stdio_init_all();
+    sleep_ms(5000);
+
+    wifiMessageBuffer = xMessageBufferCreate(1024);
 
     xTaskCreate(ir_sensor_task, "IR Sensor Task", 256, NULL, 1, NULL);
+    xTaskCreate(main_task, "Wifi Task", 256, "remote", 2, NULL);
 
     vTaskStartScheduler();  // Start FreeRTOS scheduler
 

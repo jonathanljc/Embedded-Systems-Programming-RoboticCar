@@ -118,7 +118,7 @@ void magnetometer_task(__unused void *params)
         xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
 
         printf("Command: %s\n", command);
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(350));
         counterPrint++;
     }
 }

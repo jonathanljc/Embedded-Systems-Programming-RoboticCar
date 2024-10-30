@@ -1,5 +1,7 @@
 #include "wifi.h"
 
+
+#define MQTT_QOS 0
 u32_t data_in = 0;
 
 u8_t buffer[1025];
@@ -86,7 +88,7 @@ err_t mqtt_test_publish(MQTT_CLIENT_T *mqtt_state)
     sprintf(buffer, "HELLO %d", counter);
 
     err_t err;
-    u8_t qos = 0;
+    u8_t qos = MQTT_QOS;
     u8_t retain = 0;
     cyw43_arch_lwip_begin();
     // err = mqtt_publish(state->mqtt_client, "inf2004/p1c/remote", buffer,
@@ -116,7 +118,7 @@ err_t mqtt_test_connect(MQTT_CLIENT_T *mqtt_state, const char *topic)
     ci.will_topic = NULL;
     ci.will_msg = NULL;
     ci.will_retain = 0;
-    ci.will_qos = 1;
+    ci.will_qos = MQTT_QOS;
 
     const struct mqtt_connect_client_info_t *client_info = &ci;
 
@@ -145,12 +147,12 @@ void subscribe_to_topic(const char *topic)
     cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
-        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/remote", 1, mqtt_sub_request_cb, 0, 1);
+        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/remote", MQTT_QOS, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/remote\n");
     }
     else if (strcmp(topic, "dashboard") == 0)
     {
-        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/car", 1, mqtt_sub_request_cb, 0, 1);
+        mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/car", MQTT_QOS, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/car\n");
     }
     cyw43_arch_lwip_end();
@@ -162,11 +164,11 @@ void publish_to_topic(const char *topic, const char *message)
     cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), 1, 1, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 1, mqtt_pub_request_cb, 0);
     }
     else if (strcmp(topic, "remote") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), 1, 1, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 1, mqtt_pub_request_cb, 0);
     }
     cyw43_arch_lwip_end();
 
@@ -262,7 +264,7 @@ void main_task(void *pvParameters)
             subscribed = false;
             printf("MQTT not connected\n");
             mqtt_test_connect(mqtt_state, topic);
-            vTaskDelay(pdMS_TO_TICKS(100));
+            vTaskDelay(pdMS_TO_TICKS(250));
         }
     }
 
