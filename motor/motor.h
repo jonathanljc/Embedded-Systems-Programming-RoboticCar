@@ -26,8 +26,10 @@ void init_motor_pins(); // initialize the motor pin setttings
 void move_forward(uint32_t gpioLeft, uint32_t gpioRight);
 void move_backward(uint32_t gpioLeft, uint32_t gpioRight);
 void stop_car(uint32_t gpioLeft, uint32_t gpioRight);
-void set_speed1(uint32_t gpioLeft, uint32_t gpioRight);
-void set_speed2(uint32_t gpioLeft, uint32_t gpioRight);
-void set_speed3(uint32_t gpioLeft, uint32_t gpioRight);
+void set_speed30(uint32_t gpioLeft, uint32_t gpioRight);
+void set_speed50(uint32_t gpioLeft, uint32_t gpioRight);
+void set_speed100(uint32_t gpioLeft, uint32_t gpioRight);
+void rotate_left(uint32_t gpioLeft, uint32_t gpioRight);
+void rotate_right(uint32_t gpioLeft, uint32_t gpioRight);
 
 #endif
