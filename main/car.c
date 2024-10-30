@@ -3,6 +3,7 @@
 #include "pico/stdlib.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "encoder.h"
 
 void motor_control_task(void *pvParameters) {
     move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
@@ -28,6 +29,9 @@ int main() {
 
     // Create the message buffer for printing data
     printMessageBuffer = xMessageBufferCreate(256);
+
+    // Initialize the encoder system
+    //encoder_init();
 
     // Create the ultrasonic task
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, state, 1, NULL);

@@ -1,47 +1,29 @@
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/gpio.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
-#include "pico/time.h"
-#include "message_buffer.h"
+// encoder.c
+#include "encoder.h"
 
-#define LEFT_WHEEL_ENCODER_PIN 26
-#define RIGHT_WHEEL_ENCODER_PIN 8
-#define ENCODER_NOTCHES_PER_REV 20
-#define WHEEL_DIAMETER 0.065
-#define WHEEL_CIRCUMFERENCE 0.2042
-#define DISTANCE_PER_NOTCH 0.01021
-#define MICROSECONDS_IN_A_SECOND 1000000.0
-
-typedef struct {
-    uint32_t pulse_width;
-    float speed;
-    float total_distance;
-    uint32_t notch_count;
-} PulseData_t;
-
-// Variables for the left encoder
+// Encoder variables for the left encoder
 static volatile uint32_t left_notch_count = 0;
 static volatile uint32_t left_last_rising_time = 0;
 static volatile uint32_t left_last_falling_time = 0;
 static uint32_t left_pulse_width = 0;
 
-// Variables for the right encoder
+// Encoder variables for the right encoder
 static volatile uint32_t right_notch_count = 0;
 static volatile uint32_t right_last_rising_time = 0;
 static volatile uint32_t right_last_falling_time = 0;
 static uint32_t right_pulse_width = 0;
 
+// Task handles
 TaskHandle_t leftPulseTaskHandle = NULL;
 TaskHandle_t leftSpeedTaskHandle;
 TaskHandle_t rightPulseTaskHandle = NULL;
 TaskHandle_t rightSpeedTaskHandle;
+
+// Message buffers for motor control and logging
+MessageBufferHandle_t leftMotorControlBuffer;
+MessageBufferHandle_t rightMotorControlBuffer;
 MessageBufferHandle_t leftMessageBuffer;
 MessageBufferHandle_t rightMessageBuffer;
-MessageBufferHandle_t leftMotorControlBuffer;  // New motor control buffer
-MessageBufferHandle_t rightMotorControlBuffer;
 
 // Unified interrupt callback
 void encoder_gpio_callback(uint gpio, uint32_t events) {
@@ -97,10 +79,10 @@ void left_speed_task(void *pvParameters) {
             float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
             float total_distance = left_notch_count * DISTANCE_PER_NOTCH;
             PulseData_t data = { left_pulse_width, speed, total_distance, left_notch_count };
+            
             // Send data to the motor control buffer
             xMessageBufferSend(leftMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
             xMessageBufferSend(leftMessageBuffer, &data, sizeof(data), portMAX_DELAY);
-            
         }
     }
 }
@@ -114,10 +96,10 @@ void right_speed_task(void *pvParameters) {
             float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
             float total_distance = right_notch_count * DISTANCE_PER_NOTCH;
             PulseData_t data = { right_pulse_width, speed, total_distance, right_notch_count };
+            
             // Send data to the motor control buffer
             xMessageBufferSend(rightMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
             xMessageBufferSend(rightMessageBuffer, &data, sizeof(data), portMAX_DELAY);
-            
         }
     }
 }
@@ -142,10 +124,8 @@ void right_log_task(void *pvParameters) {
     }
 }
 
-int main() {
-    stdio_init_all();
-
-    // Initialize GPIO pins and attach the same callback for both pins
+// Initialize encoders, GPIOs, and message buffers
+void encoder_init(void) {
     gpio_init(LEFT_WHEEL_ENCODER_PIN);
     gpio_set_dir(LEFT_WHEEL_ENCODER_PIN, GPIO_IN);
     gpio_pull_up(LEFT_WHEEL_ENCODER_PIN);
@@ -170,7 +150,4 @@ int main() {
     xTaskCreate(right_pulse_width_task, "Right Pulse Width Task", 1024, NULL, 1, &rightPulseTaskHandle);
     xTaskCreate(right_speed_task, "Right Speed Task", 1024, NULL, 1, &rightSpeedTaskHandle);
     xTaskCreate(right_log_task, "Right Log Task", 1024, NULL, 1, NULL);
-
-    // Start the FreeRTOS scheduler
-    vTaskStartScheduler();
 }
