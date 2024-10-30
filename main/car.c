@@ -6,13 +6,13 @@
 #include "encoder.h"
 
 void motor_control_task(void *pvParameters) {
-    move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 100);
+    move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1);
 
     while (true) {
         if (obstacleDetected) {
             stop_car(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
         } else {
-            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 100);
+            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1);
         }
         vTaskDelay(pdMS_TO_TICKS(5));
     }
