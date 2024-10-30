@@ -80,7 +80,7 @@ void init_pid() {
     pid_init(&right_pid, 0.1, 0.01, 0.01);
 }
 
-void set_motor_speed(uint32_t gpio, float speed) {
+void set_left_motor_speed(uint32_t gpio, float speed) {
     // Calculate the duty cycle
     uint32_t duty_cycle = (uint32_t)(speed * MAX_DUTY_CYCLE);
     
@@ -88,22 +88,30 @@ void set_motor_speed(uint32_t gpio, float speed) {
     pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_A, duty_cycle);
 }
 
+void set_right_motor_speed(uint32_t gpio, float speed) {
+    // Calculate the duty cycle
+    uint32_t duty_cycle = (uint32_t)(speed * MAX_DUTY_CYCLE);
+    
+    // Set the PWM level for the motor
+    pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_B, duty_cycle);
+}
+
 void set_speed30(uint32_t gpioLeft, uint32_t gpioRight) {
     // Set speed for each motor
-    set_motor_speed(gpioLeft, 0.3);
-    set_motor_speed(gpioRight, 0.3);
+    set_left_motor_speed(gpioLeft, 0.3);
+    set_right_motor_speed(gpioRight, 0.3);
 }
 
 void set_speed50(uint32_t gpioLeft, uint32_t gpioRight) {
     // Set speed for each motor
-    set_motor_speed(gpioLeft, 0.5);
-    set_motor_speed(gpioRight, 0.5);
+    set_left_motor_speed(gpioLeft, 0.5);
+    set_right_motor_speed(gpioRight, 0.5);
 }
 
 void set_speed100(uint32_t gpioLeft, uint32_t gpioRight) {
     // Set speed for each motor
-    set_motor_speed(gpioLeft, 1);
-    set_motor_speed(gpioRight, 1);
+    set_left_motor_speed(gpioLeft, 1);
+    set_right_motor_speed(gpioRight, 1);
 }
 
 void move_forward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
@@ -116,8 +124,8 @@ void move_forward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
     gpio_put(R_MOTOR_DIR_PIN2, 0);
 
     // Set speed for each motor
-    set_motor_speed(gpioLeft, speed);
-    set_motor_speed(gpioRight, speed);
+    set_left_motor_speed(gpioLeft, speed);
+    set_right_motor_speed(gpioRight, speed);
 }
 
 void move_backward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
@@ -130,8 +138,8 @@ void move_backward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
     gpio_put(R_MOTOR_DIR_PIN2, 1);
 
     // Set speed for each motor
-    set_motor_speed(gpioLeft, speed);
-    set_motor_speed(gpioRight, speed);
+    set_left_motor_speed(gpioLeft, speed);
+    set_right_motor_speed(gpioRight, speed);
 }
 
 void rotate_left(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -175,8 +183,8 @@ void rotate_right(uint32_t gpioLeft, uint32_t gpioRight) {
 void stop_car(uint32_t gpioLeft, uint32_t gpioRight) {
 
     // Set the speed for each motor
-    set_motor_speed(gpioLeft, 0);
-    set_motor_speed(gpioRight, 0);
+    set_left_motor_speed(gpioLeft, 0);
+    set_right_motor_speed(gpioRight, 0);
 }
 
 float speed_to_fraction(float speed) {
@@ -206,8 +214,8 @@ void control_speed_task(void *pvParameters) {
         float right_pid_output = pid_compute(&right_pid, setpoint_fraction, right_speed_fraction);
 
         // Adjust motor speed
-        set_motor_speed(L_MOTOR_PWM_PIN, left_pid_output);
-        set_motor_speed(R_MOTOR_PWM_PIN, right_pid_output);
+        set_left_motor_speed(L_MOTOR_PWM_PIN, left_pid_output);
+        set_right_motor_speed(R_MOTOR_PWM_PIN, right_pid_output);
 
         // Delay for 100 ms
         vTaskDelay(pdMS_TO_TICKS(100)); 
