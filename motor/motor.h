@@ -5,6 +5,7 @@
 #include "hardware/pwm.h"
 #include "pid.h"
 #include <stdint.h>  // Add this line to motor.h
+#include "FreeRTOS.h"
 #include "task.h"
 
 // Define GPIO pins - now only in motor.h
