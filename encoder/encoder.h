@@ -12,8 +12,8 @@
 #include "message_buffer.h"
 
 // Definitions
-#define LEFT_WHEEL_ENCODER_PIN 26
-#define RIGHT_WHEEL_ENCODER_PIN 8
+#define LEFT_WHEEL_ENCODER_PIN 8
+#define RIGHT_WHEEL_ENCODER_PIN 26
 #define ENCODER_NOTCHES_PER_REV 20
 #define WHEEL_DIAMETER 0.065
 #define WHEEL_CIRCUMFERENCE 0.2042
