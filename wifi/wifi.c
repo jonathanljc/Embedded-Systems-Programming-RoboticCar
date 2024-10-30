@@ -1,10 +1,10 @@
 #include "wifi.h"
 
 
-#define MQTT_QOS 0
+#define MQTT_QOS 1
 u32_t data_in = 0;
 
-u8_t buffer[1025];
+u8_t buffer[512];
 u8_t data_len = 0;
 
 int counter = 0;
@@ -27,7 +27,7 @@ static MQTT_CLIENT_T *mqtt_client_init(void)
 
 static void mqtt_pub_start_cb(void *arg, const char *topic, u32_t tot_len)
 {
-    if (tot_len > 1024)
+    if (tot_len > 512)
     {
         DEBUG_printf("Message length exceeds buffer size, discarding");
     }
@@ -57,9 +57,7 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
 
 void mqtt_pub_request_cb(void *arg, err_t err)
 {
-    // mqtt_state = (MQTT_CLIENT_T *)arg;
-    // // DEBUG_printf("mqtt_pub_request_cb: err %d\n", err);
-    // mqtt_state->received++;
+    
 }
 
 void mqtt_sub_request_cb(void *arg, err_t err)
@@ -79,24 +77,24 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg,
     }
 }
 
-err_t mqtt_test_publish(MQTT_CLIENT_T *mqtt_state)
-{
-    char buffer[256];
+// err_t mqtt_test_publish(MQTT_CLIENT_T *mqtt_state)
+// {
+//     char buffer[256];
 
-    // sprintf(buffer, "{\"message\":\"hello from picow %d / %d\"}",
-    //         state->received, state->counter);
-    sprintf(buffer, "HELLO %d", counter);
+//     // sprintf(buffer, "{\"message\":\"hello from picow %d / %d\"}",
+//     //         state->received, state->counter);
+//     sprintf(buffer, "HELLO %d", counter);
 
-    err_t err;
-    u8_t qos = MQTT_QOS;
-    u8_t retain = 0;
-    cyw43_arch_lwip_begin();
-    // err = mqtt_publish(state->mqtt_client, "inf2004/p1c/remote", buffer,
-    //                    strlen(buffer), qos, retain, mqtt_pub_request_cb, state);
-    cyw43_arch_lwip_end();
+//     err_t err;
+//     u8_t qos = MQTT_QOS;
+//     u8_t retain = 0;
+//     cyw43_arch_lwip_begin();
+//     // err = mqtt_publish(state->mqtt_client, "inf2004/p1c/remote", buffer,
+//     //                    strlen(buffer), qos, retain, mqtt_pub_request_cb, state);
+//     cyw43_arch_lwip_end();
 
-    return err;
-}
+//     return err;
+// }
 
 err_t mqtt_test_connect(MQTT_CLIENT_T *mqtt_state, const char *topic)
 {
@@ -144,7 +142,6 @@ void mqtt_run_test(MQTT_CLIENT_T *mqtt_statee)
 
 void subscribe_to_topic(const char *topic)
 {
-    cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
         mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/remote", MQTT_QOS, mqtt_sub_request_cb, 0, 1);
@@ -155,31 +152,25 @@ void subscribe_to_topic(const char *topic)
         mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/car", MQTT_QOS, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/car\n");
     }
-    cyw43_arch_lwip_end();
 }
 
 void publish_to_topic(const char *topic, const char *message)
 {
     err_t err;
-    cyw43_arch_lwip_begin();
     if (strcmp(topic, "car") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 1, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 0, mqtt_pub_request_cb, 0);
     }
     else if (strcmp(topic, "remote") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 1, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 0, mqtt_pub_request_cb, 0);
     }
-    cyw43_arch_lwip_end();
 
-    if (err != ERR_OK)
-    {
-        DEBUG_printf("Publish err: %d\n", err);
-    }
-    else
-    {
-        DEBUG_printf("Published %s\n", message);
-    }
+    if(err == ERR_OK){
+        printf("Published %s\n", message);
+    }else{
+        printf("err: %d\n", err);
+    };
     return;
 }
 
@@ -228,10 +219,9 @@ void main_task(void *pvParameters)
     {
         if (mqtt_client_is_connected(mqtt_state->mqtt_client))
         {
-            cyw43_arch_lwip_begin();
-            // printf("CALLED WIFI BEGIN\n");
+            // cyw43_arch_lwip_begin();
 
-            if (!subscribed)
+            if (!subscribed && strcmp(topic, "remote") == 0)
             {
                 subscribe_to_topic(topic);
                 subscribed = true;
@@ -243,7 +233,7 @@ void main_task(void *pvParameters)
                 if (xMessageBufferReceive(wifiMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)
                 {
                     publish_to_topic(topic, command);
-                    vTaskDelay(pdMS_TO_TICKS(100));
+                    vTaskDelay(pdMS_TO_TICKS(250));
                 }
             }
 
@@ -257,7 +247,7 @@ void main_task(void *pvParameters)
             //     counter++;
             //     vTaskDelay(pdMS_TO_TICKS(50));
             // }
-            cyw43_arch_lwip_end();
+            // cyw43_arch_lwip_end();
         }
         else
         {

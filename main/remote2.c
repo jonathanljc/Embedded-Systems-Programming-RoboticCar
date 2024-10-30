@@ -8,9 +8,9 @@ int main()
 {
     // Initialize standard I/O for debugging output
     stdio_init_all();
-    sleep_ms(5000); // Delay to ensure USB console is ready
+    sleep_ms(3000); // Delay to ensure USB console is ready
     
-    wifiMessageBuffer = xMessageBufferCreate(1024);
+    wifiMessageBuffer = xMessageBufferCreate(512);
 
     xTaskCreate(magnetometer_task, "MagnetometerTask", 256, NULL, 1, NULL);
     xTaskCreate(main_task, "WifiTask", 256, "remote", 2, NULL);
