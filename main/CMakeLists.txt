@@ -60,7 +60,7 @@ target_include_directories(car PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/..   # for our common lwipopts
         ${CMAKE_SOURCE_DIR}/ultrasonic # Include ultrasonic directory 
-        ${CMAKE_SOURCE_DIR}/encoder    # Include encoder directory
+        #${CMAKE_SOURCE_DIR}/encoder    # Include encoder directory
         ${CMAKE_SOURCE_DIR}/motor      # Include motor directory
         
 
@@ -69,7 +69,7 @@ target_include_directories(car PRIVATE
 target_link_libraries(car
 
         ultrasonic_lib  # Link the ultrasonic library
-        encoder_lib     # Link the encoder library
+        #encoder_lib     # Link the encoder library
         motor_lib       # Link the motor library
 )
 
