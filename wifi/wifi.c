@@ -221,7 +221,7 @@ void main_task(void *pvParameters)
         {
             // cyw43_arch_lwip_begin();
 
-            if (!subscribed && strcmp(topic, "remote") == 0)
+            if (!subscribed && (strcmp(topic, "dashboard") == 0 || strcmp(topic, "car") == 0))
             {
                 subscribe_to_topic(topic);
                 subscribed = true;
@@ -233,7 +233,8 @@ void main_task(void *pvParameters)
                 if (xMessageBufferReceive(wifiMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)
                 {
                     publish_to_topic(topic, command);
-                    vTaskDelay(pdMS_TO_TICKS(250));
+                    // vTaskDelay(pdMS_TO_TICKS(250));
+                    vTaskDelay(pdMS_TO_TICKS(200));
                 }
             }
 

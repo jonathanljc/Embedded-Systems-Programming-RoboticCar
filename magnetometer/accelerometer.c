@@ -115,6 +115,7 @@ void magnetometer_task(__unused void *params) {
         printf("Command: %s\n", command);
         counterPrint++;
 
-        vTaskDelay(pdMS_TO_TICKS(400));  // Reduced delay for faster response
+        // vTaskDelay(pdMS_TO_TICKS(400));
+        vTaskDelay(pdMS_TO_TICKS(300)); 
     }
 }
