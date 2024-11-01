@@ -1,8 +1,4 @@
 // encoder.h
-
-#ifndef ENCODER_H
-#define ENCODER_H
-
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
@@ -11,6 +7,8 @@
 #include "pico/time.h"
 #include "message_buffer.h"
 
+#ifndef ENCODER_H
+#define ENCODER_H
 // Definitions
 #define LEFT_WHEEL_ENCODER_PIN 8
 #define RIGHT_WHEEL_ENCODER_PIN 26
@@ -29,8 +27,8 @@ typedef struct {
 } PulseData_t;
 
 // External message buffer handles for motor control and logging
-extern MessageBufferHandle_t leftMotorControlBuffer;
-extern MessageBufferHandle_t rightMotorControlBuffer;
+//extern MessageBufferHandle_t leftMotorControlBuffer;
+//extern MessageBufferHandle_t rightMotorControlBuffer;
 extern MessageBufferHandle_t leftMessageBuffer;
 extern MessageBufferHandle_t rightMessageBuffer;
 
@@ -41,6 +39,8 @@ extern TaskHandle_t rightPulseTaskHandle;
 extern TaskHandle_t rightSpeedTaskHandle;
 
 // Function declarations
+// encoder.h
+void setup_pins_with_unified_callback();
 void encoder_init(void);
 void encoder_gpio_callback(uint gpio, uint32_t events);
 void left_pulse_width_task(void *pvParameters);

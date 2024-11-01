@@ -201,8 +201,8 @@ void control_speed_task(void *pvParameters) {
 
     while (true) {
         // Read current speed from each encoder
-        xMessageBufferReceive(leftMotorControlBuffer, &left_data, sizeof(left_data), portMAX_DELAY);
-        xMessageBufferReceive(rightMotorControlBuffer, &right_data, sizeof(right_data), portMAX_DELAY);
+        //xMessageBufferReceive(leftMotorControlBuffer, &left_data, sizeof(left_data), portMAX_DELAY);
+        //xMessageBufferReceive(rightMotorControlBuffer, &right_data, sizeof(right_data), portMAX_DELAY);
 
         // Convert speed to fraction of max speed
         float left_speed_fraction = speed_to_fraction(left_data.speed);

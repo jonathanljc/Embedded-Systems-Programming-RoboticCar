@@ -6,10 +6,8 @@ volatile uint64_t pulse_width;
 volatile bool obstacleDetected;
 MessageBufferHandle_t printMessageBuffer;
 
-
 // Initialize the Kalman filter state
-kalman_state *kalman_init(double q, double r, double p, double initial_value)
-{
+kalman_state *kalman_init(double q, double r, double p, double initial_value) {
     kalman_state *state = calloc(1, sizeof(kalman_state));
     state->q = q;
     state->r = r;
@@ -19,24 +17,8 @@ kalman_state *kalman_init(double q, double r, double p, double initial_value)
     return state;
 }
 
-// Interrupt handler for echo pin (rising and falling edges)
-void get_echo_pulse(uint gpio, uint32_t events)
-{
-    if (gpio == ECHOPIN && events & GPIO_IRQ_EDGE_RISE)
-    {
-        // Rising edge detected, start the timer
-        start_time = get_absolute_time();
-    }
-    else if (gpio == ECHOPIN && events & GPIO_IRQ_EDGE_FALL)
-    {
-        // Falling edge detected, calculate the pulse width
-        pulse_width = absolute_time_diff_us(start_time, get_absolute_time());
-    }
-}
-
 // Update Kalman filter with new measurements
-void kalman_update(kalman_state *state, double measurement)
-{
+void kalman_update(kalman_state *state, double measurement) {
     // Prediction update
     state->p = state->p + state->q;
 
@@ -47,14 +29,12 @@ void kalman_update(kalman_state *state, double measurement)
 }
 
 // Task to handle the ultrasonic sensor
-void ultrasonic_task(void *pvParameters)
-{
+void ultrasonic_task(void *pvParameters) {
     kalman_state *state = (kalman_state *)pvParameters;
     double measured;
     DistanceMessage message;
 
-    while (true)
-    {
+    while (true) {
         // Send a pulse to trigger the ultrasonic sensor
         gpio_put(TRIGPIN, 1);
         vTaskDelay(pdMS_TO_TICKS(10));  // 10us pulse
@@ -83,37 +63,29 @@ void ultrasonic_task(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
-
-// Task to handle printing
-void print_task(void *pvParameters)
-{
+// Print task to log ultrasonic and encoder data
+void print_task(void *pvParameters) {
+    printMessageBuffer = xMessageBufferCreate(256);
     DistanceMessage receivedMessage;
-
-    while (true)
-    {
-        // Wait to receive data from the ultrasonic task
-        if (xMessageBufferReceive(printMessageBuffer, &receivedMessage, sizeof(receivedMessage), portMAX_DELAY) > 0)
-        {
-            // Print the received distance
+    while (true) {
+        // Print ultrasonic data
+        if (xMessageBufferReceive(printMessageBuffer, &receivedMessage, sizeof(receivedMessage), portMAX_DELAY) > 0) {
             printf("Distance: %.2lf cm\n", receivedMessage.distance);
-
-            // If an obstacle is detected, print a warning
-            if (receivedMessage.obstacleDetected)
-            {
+            if (receivedMessage.obstacleDetected) {
                 printf("Obstacle detected within 10 cm! Taking action.\n");
             }
         }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
 // Set up the ultrasonic sensor pins
-void setupUltrasonicPins()
-{
+void setupUltrasonicPins() {
     gpio_init(TRIGPIN);
     gpio_init(ECHOPIN);
     gpio_set_dir(TRIGPIN, GPIO_OUT);
     gpio_set_dir(ECHOPIN, GPIO_IN);
 
-    // Enable rising and falling edge interrupts on the echo pin
-    gpio_set_irq_enabled_with_callback(ECHOPIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &get_echo_pulse);
+    // No need to set up an interrupt for ECHOPIN here, as it’s now in the encoder file
 }
