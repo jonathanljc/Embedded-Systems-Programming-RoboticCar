@@ -66,5 +66,4 @@ pico_enable_stdio_usb(irsensor_lib 1)
 pico_enable_stdio_uart(irsensor_lib 0)
 
 # Ensure the executable is flashed to the target device
-pico_add_extra_outputs(irsensor_lib)
-
+#pico_add_extra_outputs(irsensor_lib)
