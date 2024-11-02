@@ -5,13 +5,16 @@
 #include "ultrasonic.h"
 #include "encoder.h"
 #include "motor.h" // Include motor control functions
+#include "pid.h"
+
+SpeedControlParams speed_params = { .setpoint = 1.0 };
 
 int main() {
     stdio_init_all();
     sleep_ms(2000);  // Wait for UART to start
 
     // Initialize message buffers
-    ultrasonic_init_buffers();
+    //ultrasonic_init_buffers();
     motor_init_buffers();
 
     // Setup motor pins and initialize PWM for motor control
@@ -36,8 +39,9 @@ int main() {
 
     // Create FreeRTOS tasks for ultrasonic, printing, and motor control
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, state, 2, NULL);
-    xTaskCreate(print_task, "Print Task", 256, NULL, 3, NULL);
     xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 3, NULL);
+    xTaskCreate(control_speed_task, "Control Speed Task", 256, &speed_params, 3, NULL);
+    //xTaskCreate(print_task, "Print Task", 256, NULL, 3, NULL);
 
     // Start FreeRTOS scheduler to handle the tasks
     vTaskStartScheduler();

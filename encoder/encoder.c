@@ -13,6 +13,13 @@ static volatile uint32_t right_last_rising_time = 0;
 static volatile uint32_t right_last_falling_time = 0;
 static uint32_t right_pulse_width = 0;
 
+
+// Add these variables to keep track of previous speeds
+static float left_speed_buffer[AVERAGE_FILTER_SIZE] = {0};
+static float right_speed_buffer[AVERAGE_FILTER_SIZE] = {0};
+static int left_buffer_index = 0;
+static int right_buffer_index = 0;
+
 // Task handles
 TaskHandle_t leftPulseTaskHandle = NULL;
 TaskHandle_t leftSpeedTaskHandle;
@@ -22,11 +29,7 @@ TaskHandle_t rightSpeedTaskHandle;
 MessageBufferHandle_t leftMessageBuffer;
 MessageBufferHandle_t rightMessageBuffer;
 
-// Message buffers declared as extern to use the definitions in car.c
-//extern MessageBufferHandle_t leftMotorControlBuffer;
-//extern MessageBufferHandle_t rightMotorControlBuffer;
-//extern MessageBufferHandle_t leftMessageBuffer;
-//extern MessageBufferHandle_t rightMessageBuffer;
+
 
 // Unified interrupt callback for both ultrasonic and encoder pins
 void unified_gpio_callback(uint gpio, uint32_t events) {
@@ -86,18 +89,33 @@ void right_pulse_width_task(void *pvParameters) {
     }
 }
 
+float calculate_moving_average(float buffer[], int size) {
+    float sum = 0;
+    for (int i = 0; i < size; i++) {
+        sum += buffer[i];
+    }
+    return sum / size;
+}
+
+
 // Task for left wheel speed and distance calculation
 void left_speed_task(void *pvParameters) {
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (left_pulse_width > 0) {
+        if (left_pulse_width > MIN_PULSE_WIDTH) {
             float pulse_width_sec = left_pulse_width / MICROSECONDS_IN_A_SECOND;
             float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+
+            // Update the buffer and calculate the moving average
+            left_speed_buffer[left_buffer_index] = speed;
+            left_buffer_index = (left_buffer_index + 1) % AVERAGE_FILTER_SIZE;
+            float average_speed = calculate_moving_average(left_speed_buffer, AVERAGE_FILTER_SIZE);
+
             float total_distance = left_notch_count * DISTANCE_PER_NOTCH;
-            PulseData_t data = { left_pulse_width, speed, total_distance, left_notch_count };
+            PulseData_t data = { left_pulse_width, average_speed, total_distance, left_notch_count };
             
             // Send data to the motor control buffer
-            //xMessageBufferSend(leftMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
+            xMessageBufferSend(leftMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
             xMessageBufferSend(leftMessageBuffer, &data, sizeof(data), portMAX_DELAY);
         }
     }
@@ -107,14 +125,20 @@ void left_speed_task(void *pvParameters) {
 void right_speed_task(void *pvParameters) {
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (right_pulse_width > 0) {
+        if (right_pulse_width > MIN_PULSE_WIDTH) {
             float pulse_width_sec = right_pulse_width / MICROSECONDS_IN_A_SECOND;
             float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+
+            // Update the buffer and calculate the moving average
+            right_speed_buffer[right_buffer_index] = speed;
+            right_buffer_index = (right_buffer_index + 1) % AVERAGE_FILTER_SIZE;
+            float average_speed = calculate_moving_average(right_speed_buffer, AVERAGE_FILTER_SIZE);
+
             float total_distance = right_notch_count * DISTANCE_PER_NOTCH;
-            PulseData_t data = { right_pulse_width, speed, total_distance, right_notch_count };
+            PulseData_t data = { right_pulse_width, average_speed, total_distance, right_notch_count };
             
             // Send data to the motor control buffer
-            //xMessageBufferSend(rightMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
+            xMessageBufferSend(rightMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
             xMessageBufferSend(rightMessageBuffer, &data, sizeof(data), portMAX_DELAY);
         }
     }

@@ -17,6 +17,8 @@
 #define WHEEL_CIRCUMFERENCE 0.2042
 #define DISTANCE_PER_NOTCH 0.01021
 #define MICROSECONDS_IN_A_SECOND 1000000.0
+#define MIN_PULSE_WIDTH 500  // Adjust this threshold based on testing results
+#define AVERAGE_FILTER_SIZE 10  // Set a buffer size based on desired smoothness
 
 // Data structure for encoder data
 typedef struct {
@@ -27,8 +29,8 @@ typedef struct {
 } PulseData_t;
 
 // External message buffer handles for motor control and logging
-//extern MessageBufferHandle_t leftMotorControlBuffer;
-//extern MessageBufferHandle_t rightMotorControlBuffer;
+extern MessageBufferHandle_t leftMotorControlBuffer;
+extern MessageBufferHandle_t rightMotorControlBuffer;
 extern MessageBufferHandle_t leftMessageBuffer;
 extern MessageBufferHandle_t rightMessageBuffer;
 
