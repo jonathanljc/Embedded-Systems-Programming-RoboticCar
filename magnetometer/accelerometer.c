@@ -1,8 +1,4 @@
 #include "accelerometer.h"
-#include "message_buffer.h" // Include this for xMessageBufferSend
-
-// Assuming wifiMessageBuffer is defined and initialized elsewhere in your code
-extern MessageBufferHandle_t wifiMessageBuffer;
 
 #define ACCEL_I2C_ADDR 0x19
 #define CTRL_REG1_A 0x20
@@ -15,6 +11,8 @@ float accel_x_buffer[FILTER_SAMPLES] = {0};
 float accel_y_buffer[FILTER_SAMPLES] = {0};
 float accel_z_buffer[FILTER_SAMPLES] = {0};
 int buffer_index = 0;
+
+int counterPrint = 0;
 
 // Struct to hold accelerometer data
 typedef struct {
@@ -85,33 +83,39 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
 
 // Magnetometer task for reading data and sending commands
 void magnetometer_task(__unused void *params) {
-    vTaskDelay(pdMS_TO_TICKS(1000));  // Shorter initial delay for faster start
+    vTaskDelay(pdMS_TO_TICKS(5000));  // Shorter initial delay for faster start
     AccelerometerData accel_data;
     int16_t raw_ax, raw_ay, raw_az;
     char command[50];
-    char last_command[50] = "";  // Store last command to avoid duplicates
+    // char last_command[50] = "";  // Store last command to avoid duplicates
 
     // Initialize I2C and GY-511 sensor
-    i2c_init(i2c1, 100 * 1000);
-    gpio_set_function(26, GPIO_FUNC_I2C);
-    gpio_set_function(27, GPIO_FUNC_I2C);
-    gpio_pull_up(26);
-    gpio_pull_up(27);
-    gy511_init(i2c1);
+    // i2c_init(i2c1, 100 * 1000);
+    // gpio_set_function(26, GPIO_FUNC_I2C);
+    // gpio_set_function(27, GPIO_FUNC_I2C);
+    // gpio_pull_up(26);
+    // gpio_pull_up(27);
+    // gy511_init(i2c1);
 
     while (true) {
         // Read accelerometer data, process, and generate command
-        gy511_read_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
-        process_acceleration(raw_ax, raw_ay, raw_az, &accel_data);
-        generate_control_command(&accel_data, command);
+        // gy511_read_acceleration(i2c1, &raw_ax, &raw_ay, &raw_az);
+        // process_acceleration(raw_ax, raw_ay, raw_az, &accel_data);
+        // generate_control_command(&accel_data, command);
 
         // Only send command if it differs from the previous command
-        if (strcmp(command, last_command) != 0) {
-            xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
-            strncpy(last_command, command, sizeof(last_command) - 1);  // Update last command
-            printf("Command: %s\n", command);
-        }
+        // if (strcmp(command, last_command) != 0) {
+        //     xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
+        //     strncpy(last_command, command, sizeof(last_command) - 1);  // Update last command
+        //     printf("Command: %s\n", command);
+        // }
 
-        vTaskDelay(pdMS_TO_TICKS(100));  // Reduced delay for faster response
+        snprintf(command, 50, "move forward at 25.0%% speed %d\n", counterPrint);
+        xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
+        printf("Command: %s\n", command);
+        counterPrint++;
+
+        // vTaskDelay(pdMS_TO_TICKS(400));
+        vTaskDelay(pdMS_TO_TICKS(300)); 
     }
 }

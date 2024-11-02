@@ -18,6 +18,7 @@ target_compile_definitions(dashboard PRIVATE
 
 target_link_libraries(dashboard
         wifi_lib
+
 )
 
 pico_add_extra_outputs(dashboard)
@@ -58,22 +59,36 @@ add_executable(car
 
 target_include_directories(car PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}/..   # for our common lwipopts
-        ${CMAKE_SOURCE_DIR}/ultrasonic # Include ultrasonic directory 
-        ${CMAKE_SOURCE_DIR}/encoder    # Include encoder directory
-        ${CMAKE_SOURCE_DIR}/motor      # Include motor directory
+        ${CMAKE_CURRENT_LIST_DIR}/..        # for our common lwipopts
+        ${CMAKE_SOURCE_DIR}/ultrasonic      # Include ultrasonic directory 
+        ${CMAKE_SOURCE_DIR}/encoder         # Include encoder directory
+        ${CMAKE_SOURCE_DIR}/motor           # Include motor directory
+        ${CMAKE_SOURCE_DIR}/irline          # Include irline directory
+        ${CMAKE_SOURCE_DIR}/wifi            # Include wifi directory if required by irsensor_lib
 )
+
+target_compile_definitions(car PRIVATE
+    NO_SYS=0            # Setting NO_SYS to 0 as required by lwIP FreeRTOS
+    LWIP_SOCKET=1       # Enable socket API if needed
+    LWIP_MQTT=1         # Enable MQTT if required
+    LWIP_TCP=1          # Enable TCP if needed
+)
+
 
 target_link_libraries(car
-
-        ultrasonic_lib  # Link the ultrasonic library
-        encoder_lib     # Link the encoder library
-        motor_lib       # Link the motor library
+        pico_stdlib       # Link standard Pico library
+        ultrasonic_lib    # Link the ultrasonic library
+        encoder_lib       # Link the encoder library
+        motor_lib         # Link the motor library
+        irsensor_lib      # Link the irsensor library
 )
+
+
 
 pico_add_extra_outputs(car)
 pico_enable_stdio_usb(car 1)
 pico_enable_stdio_uart(car 1)
+
 
 # Remote2 executable
 add_executable(remote2

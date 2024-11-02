@@ -1,6 +1,3 @@
-#ifndef ULTRASONIC_H
-#define ULTRASONIC_H
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "pico/stdlib.h"
@@ -10,6 +7,8 @@
 #include "task.h"
 #include "message_buffer.h"  // Include FreeRTOS message buffer library
 
+#ifndef ULTRASONIC_H
+#define ULTRASONIC_H
 // Define ultrasonic sensor pins
 #define TRIGPIN 1
 #define ECHOPIN 0
@@ -19,7 +18,7 @@ extern volatile absolute_time_t start_time;
 extern volatile uint64_t pulse_width;
 extern volatile bool obstacleDetected;
 extern MessageBufferHandle_t printMessageBuffer;  // Message buffer for printing data
-
+extern MessageBufferHandle_t motorMessageBuffer;  // Message buffer for motor control
 // Structure to hold the distance and obstacle status
 typedef struct
 {
@@ -44,5 +43,6 @@ void kalman_update(kalman_state *state, double measurement);
 void ultrasonic_task(void *pvParameters);
 void print_task(void *pvParameters);
 void setupUltrasonicPins();
+void ultrasonic_init_buffers();
 
 #endif // ULTRASONIC_H
