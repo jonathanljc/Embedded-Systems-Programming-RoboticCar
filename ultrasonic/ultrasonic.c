@@ -4,6 +4,7 @@
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width;
 volatile bool obstacleDetected;
+// Define and initialize the message buffer
 MessageBufferHandle_t printMessageBuffer;
 
 // Initialize the Kalman filter state
@@ -49,12 +50,12 @@ void ultrasonic_task(void *pvParameters) {
         // Update the Kalman filter with the measured distance
         kalman_update(state, measured);
 
-        // Check if an obstacle is detected within 10 cm
-        obstacleDetected = (state->x < 10);
-
         // Prepare the message with distance and obstacle detection status
         message.distance = state->x;
-        message.obstacleDetected = obstacleDetected;
+        message.obstacleDetected = (state->x < 10);
+
+        // Send the message to motor control task
+        xMessageBufferSend(motorMessageBuffer, &message, sizeof(message), 0);
 
         // Send the message to the print task using a message buffer
         xMessageBufferSend(printMessageBuffer, &message, sizeof(message), 0);
@@ -63,20 +64,23 @@ void ultrasonic_task(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
-// Print task to log ultrasonic and encoder data
+// Print task to log ultrasonic data
 void print_task(void *pvParameters) {
-    printMessageBuffer = xMessageBufferCreate(256);
     DistanceMessage receivedMessage;
     while (true) {
         // Print ultrasonic data
         if (xMessageBufferReceive(printMessageBuffer, &receivedMessage, sizeof(receivedMessage), portMAX_DELAY) > 0) {
             printf("Distance: %.2lf cm\n", receivedMessage.distance);
-            if (receivedMessage.obstacleDetected) {
-                printf("Obstacle detected within 10 cm! Taking action.\n");
-            }
         }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+void ultrasonic_init_buffers() {
+    printMessageBuffer = xMessageBufferCreate(256);
+    if (printMessageBuffer == NULL) {
+        printf("Failed to create print message buffer\n");
+        while (true);  // Halt if buffer creation fails
     }
 }
 

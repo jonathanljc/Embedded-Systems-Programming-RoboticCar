@@ -6,6 +6,10 @@
 #include "encoder.h"
 #include "task.h"
 #include "message_buffer.h"
+#include "ultrasonic.h"
+
+// Define and initialize the message buffer
+MessageBufferHandle_t motorMessageBuffer;
 
 // Define PID controller for each motor
 PIDController left_pid;
@@ -221,5 +225,35 @@ void control_speed_task(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(100)); 
     }
 }
+void motor_init_buffers() {
+    motorMessageBuffer = xMessageBufferCreate(256);
+    if (motorMessageBuffer == NULL) {
+        printf("Failed to create motor message buffer\n");
+        while (true);  // Halt if buffer creation fails
+    }
+}
+
+// Task to control the motor based on obstacle detection
+void motor_control_task(void *pvParameters) {
+    DistanceMessage receivedMessage;
+
+    while (true) {
+        // Receive obstacle detection message (refer to ultraonic.c void ultrasonic_task(void *pvParameters))
+        if (xMessageBufferReceive(motorMessageBuffer, &receivedMessage, sizeof(receivedMessage), portMAX_DELAY) > 0) {
+            // Check if an obstacle is detected and take action
+            if (receivedMessage.obstacleDetected) {
+                printf("Obstacle detected within 10 cm! Taking action.\n");
+                stop_car(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);  // Stop the car
+            } else {
+                // No obstacle detected, keep moving forward
+                move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1);
+            }
+        }
+
+        // Small delay to prevent excessive loop execution
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
 
 

@@ -12,11 +12,13 @@ target_link_libraries(motor_lib
     FreeRTOS-Kernel      # FreeRTOS kernel
     FreeRTOS-Kernel-Heap4  # FreeRTOS heap
     encoder_lib
+    ultrasonic_lib
 )
 
 # Add include directories
 target_include_directories(motor_lib PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/../encoder
+    ${CMAKE_CURRENT_LIST_DIR}/../ultrasonic  # Updated path for ultrasonic.h
 )
 
 # create map/bin/hex file etc.

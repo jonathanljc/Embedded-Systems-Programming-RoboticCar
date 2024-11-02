@@ -32,6 +32,7 @@ extern TaskHandle_t controlSpeedTaskHandle;
 void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight);
 
 // Functions to control the car
+void motor_init_buffers(); // initialize the message buffer for motor control
 void init_motor_pins(); // initialize the motor pin setttings
 void init_pid(); // initialize the PID controller
 void move_forward(uint32_t gpioLeft, uint32_t gpioRight, float speed);
@@ -43,5 +44,6 @@ void set_speed100(uint32_t gpioLeft, uint32_t gpioRight);
 void rotate_left(uint32_t gpioLeft, uint32_t gpioRight);
 void rotate_right(uint32_t gpioLeft, uint32_t gpioRight);
 void control_speed_task(void *pvParameters);
+void motor_control_task(void *pvParameters);
 
 #endif
