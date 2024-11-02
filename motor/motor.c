@@ -4,8 +4,10 @@
 #include "pid.h"
 #include "motor.h"
 #include "encoder.h"
+#include "ultrasonic.h"
 #include "task.h"
 #include "message_buffer.h"
+#include <stdio.h>
 
 // Define PID controller for each motor
 PIDController left_pid;
@@ -15,7 +17,10 @@ PIDController right_pid;
 #define MAX_DUTY_CYCLE 12500
 
 // Define max speed in m/s
-#define MAX_SPEED 2.0
+#define MAX_SPEED 0.48
+
+// Define the task handle
+TaskHandle_t controlSpeedTaskHandle;
 
 // Function to set up the PWM
 void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -37,7 +42,7 @@ void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight) {
     pwm_set_enabled(slice_num_left, true);
 
     // Ensure car starts at a stop
-    pwm_set_chan_level(slice_num_left, PWM_CHAN_A, 0);
+    pwm_set_chan_level(slice_num_left, PWM_CHAN_B, 0);
 
     // Set up for right motor
 
@@ -57,7 +62,7 @@ void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight) {
     pwm_set_enabled(slice_num_right, true);
 
     // Ensure car starts at a stop
-    pwm_set_chan_level(slice_num_right, PWM_CHAN_B, 0);
+    pwm_set_chan_level(slice_num_right, PWM_CHAN_A, 0);
 }
 
 void init_motor_pins() {
@@ -76,8 +81,8 @@ void init_motor_pins() {
 
 void init_pid() {
     // Initialize PID controller for each motor
-    pid_init(&left_pid, 0.1, 0.01, 0.01);
-    pid_init(&right_pid, 0.1, 0.01, 0.01);
+    pid_init(&left_pid, 0.5, 0.05, 0.005);
+    pid_init(&right_pid, 0.5, 0.05, 0.005);
 }
 
 void set_left_motor_speed(uint32_t gpio, float speed) {
@@ -85,7 +90,7 @@ void set_left_motor_speed(uint32_t gpio, float speed) {
     uint32_t duty_cycle = (uint32_t)(speed * MAX_DUTY_CYCLE);
     
     // Set the PWM level for the motor
-    pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_A, duty_cycle);
+    pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_B, duty_cycle);
 }
 
 void set_right_motor_speed(uint32_t gpio, float speed) {
@@ -93,7 +98,7 @@ void set_right_motor_speed(uint32_t gpio, float speed) {
     uint32_t duty_cycle = (uint32_t)(speed * MAX_DUTY_CYCLE);
     
     // Set the PWM level for the motor
-    pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_B, duty_cycle);
+    pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_A, duty_cycle);
 }
 
 void set_speed30(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -124,7 +129,7 @@ void move_forward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
     gpio_put(R_MOTOR_DIR_PIN2, 0);
 
     // Set speed for each motor
-    set_left_motor_speed(gpioLeft, speed);
+    set_left_motor_speed(gpioLeft, speed - 0.148);
     set_right_motor_speed(gpioRight, speed);
 }
 
@@ -138,7 +143,7 @@ void move_backward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
     gpio_put(R_MOTOR_DIR_PIN2, 1);
 
     // Set speed for each motor
-    set_left_motor_speed(gpioLeft, speed);
+    set_left_motor_speed(gpioLeft, speed - 0.148);
     set_right_motor_speed(gpioRight, speed);
 }
 
@@ -155,7 +160,7 @@ void rotate_left(uint32_t gpioLeft, uint32_t gpioRight) {
     set_speed30(gpioLeft, gpioRight);
 
     // Rotate for 1 second
-    sleep_ms(1000);
+    sleep_ms(750);
 
     // Stop the car
     stop_car(gpioLeft, gpioRight);
@@ -171,7 +176,7 @@ void rotate_right(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(R_MOTOR_DIR_PIN2, 1);
 
     // Set speed
-    set_speed30(gpioLeft, gpioRight);
+    set_speed50(gpioLeft, gpioRight);
 
     // Rotate for 1 second
     sleep_ms(1000);
@@ -195,30 +200,44 @@ void control_speed_task(void *pvParameters) {
     // Cast the parameters to the SpeedControlParams struct
     SpeedControlParams *params = (SpeedControlParams *)pvParameters;
     float setpoint = params->setpoint;
+    printf("Setpoint: %f\n", setpoint);
+    float setpoint_fraction = speed_to_fraction(setpoint);
+
+    // Move car forward at setpoint speed
+    move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, setpoint);
 
     PulseData_t left_data;
     PulseData_t right_data;
 
     while (true) {
-        // Read current speed from each encoder
-        xMessageBufferReceive(leftMotorControlBuffer, &left_data, sizeof(left_data), portMAX_DELAY);
-        xMessageBufferReceive(rightMotorControlBuffer, &right_data, sizeof(right_data), portMAX_DELAY);
+        /*if (obstacleDetected){
+            stop_car(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+        }
+        else{ */
+            // Read current speed from each encoder
+            if(xMessageBufferReceive(leftMotorControlBuffer, &left_data, sizeof(left_data), pdMS_TO_TICKS(10)) == sizeof(left_data) &&
+            xMessageBufferReceive(rightMotorControlBuffer, &right_data, sizeof(right_data), pdMS_TO_TICKS(10)) == sizeof(right_data)){
 
-        // Convert speed to fraction of max speed
-        float left_speed_fraction = speed_to_fraction(left_data.speed);
-        float right_speed_fraction = speed_to_fraction(right_data.speed);
-        float setpoint_fraction = speed_to_fraction(setpoint);
+                // Convert speed to fraction of max speed
+                float left_speed_fraction = speed_to_fraction(left_data.speed);
+                float right_speed_fraction = speed_to_fraction(right_data.speed);
+                printf("Left speed fraction: %f\n", left_speed_fraction);
+                printf("Right speed fraction: %f\n", right_speed_fraction);
 
-        // Compute PID output for each motor
-        float left_pid_output = pid_compute(&left_pid, setpoint_fraction, left_speed_fraction); 
-        float right_pid_output = pid_compute(&right_pid, setpoint_fraction, right_speed_fraction);
+                // Compute PID output for each motor
+                float left_pid_output = pid_compute(&left_pid, setpoint_fraction, left_speed_fraction); 
+                float right_pid_output = pid_compute(&right_pid, setpoint_fraction, right_speed_fraction);
+                printf("Left PID output: %f\n", left_pid_output);
+                printf("Right PID output: %f\n", right_pid_output);
 
-        // Adjust motor speed
-        set_left_motor_speed(L_MOTOR_PWM_PIN, left_pid_output);
-        set_right_motor_speed(R_MOTOR_PWM_PIN, right_pid_output);
-
-        // Delay for 100 ms
-        vTaskDelay(pdMS_TO_TICKS(100)); 
+                // Adjust motor speed
+                set_left_motor_speed(L_MOTOR_PWM_PIN, left_pid_output);
+                set_right_motor_speed(R_MOTOR_PWM_PIN, right_pid_output);
+            }
+        
+            // Delay for 100 ms
+            vTaskDelay(pdMS_TO_TICKS(100)); 
+        
     }
 }
 
