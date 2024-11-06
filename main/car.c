@@ -16,7 +16,7 @@ int main() {
     sleep_ms(2000); 
  
     // Initialize Kalman filter state 
-    kalman_state *kalman = kalman_init(1, 100, 1, 0);  // You can adjust parameters as needed 
+    kalman_state *kalman = kalman_init(0.1, 1.0, 1.0, 50);  // You can adjust parameters as needed 
  
     // Create tasks for ultrasonic and logging 
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 1, &ultrasonicTaskHandle); 

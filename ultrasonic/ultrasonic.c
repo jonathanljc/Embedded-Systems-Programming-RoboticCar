@@ -71,6 +71,10 @@ void ultrasonic_task(void *pvParameters) {
 
             // After rotation, resume moving forward
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            vTaskDelay(pdMS_TO_TICKS(5500));  // Adjust delay as needed
+            stop_motors();
+            vTaskDelete(NULL);
    
         } else {
             // No obstacle detected, continue moving forward

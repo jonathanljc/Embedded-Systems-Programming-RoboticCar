@@ -50,15 +50,16 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left) {
     pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), is_left ? PWM_CHAN_A : PWM_CHAN_B, duty_cycle);
 }
 
-void set_speed40(uint32_t gpioLeft, uint32_t gpioRight) {
-    set_motor_speed(gpioLeft, 0.4 * 0.88, true);
-    set_motor_speed(gpioRight, 0.4, false);
+void set_speed50(uint32_t gpioLeft, uint32_t gpioRight) {
+    set_motor_speed(gpioLeft, 0.5, true);
+    set_motor_speed(gpioRight, 0.5 * 0.91, false);
 }
 
 void set_speed70(uint32_t gpioLeft, uint32_t gpioRight) {
     set_motor_speed(gpioLeft, 0.7, true);
-    set_motor_speed(gpioRight, 0.7, false);
+    set_motor_speed(gpioRight, 0.7 * 0.90, false);
 }
+
 
 void set_speed100(uint32_t gpioLeft, uint32_t gpioRight) {
     set_motor_speed(gpioLeft, 1.0 - 0.08, true);
@@ -70,7 +71,7 @@ void move_forward(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
-    set_speed40(gpioLeft, gpioRight);
+    set_speed50(gpioLeft, gpioRight);
 }
 
 void stop_motors() {
@@ -96,7 +97,7 @@ void rotate_right(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(R_MOTOR_DIR_PIN1, 0);
     gpio_put(R_MOTOR_DIR_PIN2, 1);
     set_speed70(gpioLeft, gpioRight);
-    sleep_ms(275); // Small angle rotation
+    sleep_ms(650); // Small angle rotation
 }
 void set_left_motor_speed(uint32_t gpio, float speed) {
     // Calculate the duty cycle
