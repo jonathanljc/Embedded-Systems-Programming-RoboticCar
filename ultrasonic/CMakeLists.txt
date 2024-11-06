@@ -10,6 +10,13 @@ target_link_libraries(ultrasonic_lib
     hardware_timer       # Timer control
     FreeRTOS-Kernel      # FreeRTOS kernel
     FreeRTOS-Kernel-Heap4  # FreeRTOS heap
+    motor_lib            # Motor library
+)
+
+# Add include directories
+target_include_directories(ultrasonic_lib PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/../motor
+
 )
 
 # Enable USB and UART output for stdio (so you can print debug messages to the serial console)
