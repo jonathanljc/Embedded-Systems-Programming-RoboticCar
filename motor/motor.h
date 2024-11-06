@@ -20,8 +20,8 @@
 // Function declarations
 void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight);
 void init_motor_pins();
-void move_forward(uint32_t gpioLeft, uint32_t gpioRight, float speed);
-void move_backward(uint32_t gpioLeft, uint32_t gpioRight, float speed);  // Add only if defined in motor.c
+void move_forward(uint32_t gpioLeft, uint32_t gpioRight);
+// void move_backward(uint32_t gpioLeft, uint32_t gpioRight, float speed);  // Add only if defined in motor.c
 void rotate_left(uint32_t gpioLeft, uint32_t gpioRight);
 void rotate_right(uint32_t gpioLeft, uint32_t gpioRight);
 void stop_motors();
@@ -29,6 +29,6 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left);
 void set_left_motor_speed(uint32_t gpio, float speed);
 void set_right_motor_speed(uint32_t gpio, float speed);
 void motor_init_buffers(); // Initialize motor control message buffer
-void week10task1(void *pvParameters);
+// void week10task1(void *pvParameters);
 
 #endif

@@ -166,7 +166,7 @@ void right_log_task(void *pvParameters) {
 
 void encoder_init() {
     // Create pulse width and speed tasks for both left and right encoders
-    printMessageBuffer = xMessageBufferCreate(256);
+    // printMessageBuffer = xMessageBufferCreate(256);
     leftMessageBuffer = xMessageBufferCreate(256);
     rightMessageBuffer = xMessageBufferCreate(256);
     if (leftMessageBuffer == NULL || rightMessageBuffer == NULL) {

@@ -50,13 +50,27 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left) {
     pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), is_left ? PWM_CHAN_A : PWM_CHAN_B, duty_cycle);
 }
 
-void move_forward(uint32_t gpioLeft, uint32_t gpioRight, float speed) {
+void set_speed40(uint32_t gpioLeft, uint32_t gpioRight) {
+    set_motor_speed(gpioLeft, 0.4 * 0.88, true);
+    set_motor_speed(gpioRight, 0.4, false);
+}
+
+void set_speed70(uint32_t gpioLeft, uint32_t gpioRight) {
+    set_motor_speed(gpioLeft, 0.7, true);
+    set_motor_speed(gpioRight, 0.7, false);
+}
+
+void set_speed100(uint32_t gpioLeft, uint32_t gpioRight) {
+    set_motor_speed(gpioLeft, 1.0 - 0.08, true);
+    set_motor_speed(gpioRight, 1.0, false);
+}
+
+void move_forward(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN1, 1);
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
-    set_motor_speed(gpioLeft, speed - 0.08, true); // 95% speed for left motor
-    set_motor_speed(gpioRight, speed, false);      // 100% speed for right motor
+    set_speed40(gpioLeft, gpioRight);
 }
 
 void stop_motors() {
@@ -70,9 +84,8 @@ void rotate_left(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 1);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
-    set_motor_speed(gpioLeft, 0.5, true);
-    set_motor_speed(gpioRight, 0.7, false);
-    sleep_ms(250); // Small angle rotation
+    set_speed70(gpioLeft, gpioRight);
+    sleep_ms(275); // Small angle rotation
     stop_motors();
 }
 
@@ -82,9 +95,8 @@ void rotate_right(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 0);
     gpio_put(R_MOTOR_DIR_PIN2, 1);
-    set_motor_speed(gpioLeft, 0.5, true);
-    set_motor_speed(gpioRight, 0.7, false);
-    sleep_ms(100); // Small angle rotation
+    set_speed70(gpioLeft, gpioRight);
+    sleep_ms(275); // Small angle rotation
 }
 void set_left_motor_speed(uint32_t gpio, float speed) {
     // Calculate the duty cycle

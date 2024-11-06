@@ -70,11 +70,11 @@ void ultrasonic_task(void *pvParameters) {
             rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
             // After rotation, resume moving forward
-            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1.0);
+            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
    
         } else {
             // No obstacle detected, continue moving forward
-            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1.0);
+            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed

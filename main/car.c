@@ -1,51 +1,33 @@
-#include "pico/stdlib.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "message_buffer.h"
-#include "ultrasonic.h"
-#include "encoder.h"
-#include "motor.h" // Include motor control functions
-#include "pid.h"
-
-SpeedControlParams speed_params = { .setpoint = 1.0 };
-
-int main() {
-    stdio_init_all();
-    sleep_ms(2000);  // Wait for UART to start
-
-    // Initialize message buffers
-    //ultrasonic_init_buffers();
-    motor_init_buffers();
-
-    // Setup motor pins and initialize PWM for motor control
-    init_motor_pins();
-    sleep_ms(2000);
-    setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-    sleep_ms(2000);
-
-    init_pid();  // Initialize PID controller if required
-    sleep_ms(2000);
-
-    // Setup pins for ultrasonic and encoder
-    setup_pins_with_unified_callback();
-    sleep_ms(2000);
-    
-    // Initialize encoder tasks (called from encoder.c)
-    encoder_init();
-    sleep_ms(2000);
-
-    // Initialize the Kalman filter state for ultrasonic
-    kalman_state *state = kalman_init(2, 50, 5, 0);
-
-    // Create FreeRTOS tasks for ultrasonic, printing, and motor control
-    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, state, 2, NULL);
-    xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 3, NULL);
-    xTaskCreate(control_speed_task, "Control Speed Task", 256, &speed_params, 3, NULL);
-    //xTaskCreate(print_task, "Print Task", 256, NULL, 3, NULL);
-
-    // Start FreeRTOS scheduler to handle the tasks
-    vTaskStartScheduler();
-
-    while(true);
-
+#include "encoder.h" 
+#include "ultrasonic.h"  // Include ultrasonic header 
+#include "motor.h"       // Include motor header for motor control functions 
+#include <stdio.h> 
+#include "pico/stdlib.h" 
+#include "FreeRTOS.h" 
+#include "task.h" 
+#include "message_buffer.h" 
+ 
+// Define the task handle for ultrasonic task 
+TaskHandle_t ultrasonicTaskHandle = NULL; 
+ 
+int main() { 
+    // Initialize standard I/O for serial output 
+    stdio_init_all(); 
+    sleep_ms(2000); 
+ 
+    // Initialize Kalman filter state 
+    kalman_state *kalman = kalman_init(1, 100, 1, 0);  // You can adjust parameters as needed 
+ 
+    // Create tasks for ultrasonic and logging 
+    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 1, &ultrasonicTaskHandle); 
+ 
+    // Start the FreeRTOS scheduler 
+    vTaskStartScheduler(); 
+ 
+    // The main function should not reach here as FreeRTOS tasks run indefinitely 
+    while (1) { 
+        // Idle loop; FreeRTOS takes over task management 
+    } 
+ 
+    return 0; 
 }
