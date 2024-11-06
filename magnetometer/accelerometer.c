@@ -5,15 +5,13 @@
 #define OUT_X_L_A 0x28
 #define ACCEL_CONVERSION 0.00059841 // Convert to m/s² for ±2g
 #define FILTER_SAMPLES 5            // Reduced samples for faster response
-#define STATIONARY_THRESHOLD 0.05   // Threshold to detect stationary state
+#define STATIONARY_THRESHOLD 0.05    // Threshold to detect stationary state
 
 // Circular buffers for moving average filter
 float accel_x_buffer[FILTER_SAMPLES] = {0};
 float accel_y_buffer[FILTER_SAMPLES] = {0};
 float accel_z_buffer[FILTER_SAMPLES] = {0};
 int buffer_index = 0;
-
-int counterPrint = 0;
 
 // Struct to hold accelerometer data
 typedef struct
@@ -84,23 +82,31 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
         fabs(accel_data->y) < STATIONARY_THRESHOLD &&
         fabs(accel_data->z) < STATIONARY_THRESHOLD)
     {
-        // Set command to stop if stationary
-        snprintf(command_buffer, 50, "stop at 0%% speed");
+        snprintf(command_buffer, 50, "stop");
         return;
     }
 
     // Calculate movement speed and direction if not stationary
     float speed = sqrt(accel_data->x * accel_data->x + accel_data->y * accel_data->y) / 9.81; // Normalize to g-force
-    speed = fmin(speed, 1.0) * 100;                                                           // Cap speed to 100%
+    speed = fmin(speed, 1.0) * 100; // Cap speed to 100%
 
-    // Determine control command based on direction
+    // Round speed to nearest multiple of 10
+    int rounded_speed = ((int)(speed + 5) / 10) * 10;
+
+    // If rounded speed is 0%, set command to "stop"
+    if (rounded_speed == 0) {
+        snprintf(command_buffer, 50, "stop");
+        return;
+    }
+
+    // Determine control command based on direction and rounded speed
     if (fabs(accel_data->y) > fabs(accel_data->x))
     {
-        snprintf(command_buffer, 50, "turn %s at %.1f%% speed", accel_data->y > 0 ? "left" : "right", speed);
+        snprintf(command_buffer, 50, "turn %s at %d%% speed", accel_data->y > 0 ? "left" : "right", rounded_speed);
     }
     else
     {
-        snprintf(command_buffer, 50, "move %s at %.1f%% speed", accel_data->x > 0 ? "forward" : "backward", speed);
+        snprintf(command_buffer, 50, "move %s at %d%% speed", accel_data->x > 0 ? "forward" : "backward", rounded_speed);
     }
 }
 
@@ -131,17 +137,11 @@ void magnetometer_task(__unused void *params)
         // Only send command if it differs from the previous command
         if (strcmp(command, last_command) != 0)
         {
-            xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
+            xMessageBufferSend(wifiMessageBuffer, command, strlen(command) + 1, 0);
             strncpy(last_command, command, sizeof(last_command) - 1); // Update last command
             printf("Command: %s\n", command);
         }
 
-        // snprintf(command, 50, "move forward at 25.0%% speed %d\n", counterPrint);
-        // xMessageBufferSend(wifiMessageBuffer, &command, sizeof(command), 0);
-        // printf("Command: %s\n", command);
-        // counterPrint++;
-
-        // vTaskDelay(pdMS_TO_TICKS(400));
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
