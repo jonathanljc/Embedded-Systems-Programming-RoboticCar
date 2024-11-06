@@ -1,9 +1,11 @@
 #include "ultrasonic.h"
+#include "motor.h"
 
 // Define external variables
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width;
 volatile bool obstacleDetected;
+
 // Define and initialize the message buffer
 MessageBufferHandle_t printMessageBuffer;
 
@@ -29,67 +31,65 @@ void kalman_update(kalman_state *state, double measurement) {
     state->p = (1 - state->k) * state->p;  // Update uncertainty
 }
 
-// Task to handle the ultrasonic sensor
+// GPIO interrupt callback for measuring pulse width
+void ultrasonic_echo_callback(uint gpio, uint32_t events) {
+    if (gpio == ECHOPIN) {
+        if (events & GPIO_IRQ_EDGE_RISE) {
+            // Rising edge detected, start timing
+            start_time = get_absolute_time();
+        } else if (events & GPIO_IRQ_EDGE_FALL) {
+            // Falling edge detected, calculate pulse width
+            pulse_width = absolute_time_diff_us(start_time, get_absolute_time());
+        }
+    }
+}
+
 void ultrasonic_task(void *pvParameters) {
     kalman_state *state = (kalman_state *)pvParameters;
     double measured;
     DistanceMessage message;
 
+    setupUltrasonicPins();
+    init_motor_pins();
+    setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+
     while (true) {
-        // Send a pulse to trigger the ultrasonic sensor
         gpio_put(TRIGPIN, 1);
-        vTaskDelay(pdMS_TO_TICKS(10));  // 10us pulse
+        sleep_us(10);
         gpio_put(TRIGPIN, 0);
 
-        // Wait for the pulse to complete
-        vTaskDelay(pdMS_TO_TICKS(1));  // 1ms for echo response
-
-        // Convert pulse width to distance in cm (Speed of sound: 343 m/s = 29 us/cm)
         measured = pulse_width / 29.0 / 2.0;
 
-        // Update the Kalman filter with the measured distance
         kalman_update(state, measured);
 
-        // Prepare the message with distance and obstacle detection status
         message.distance = state->x;
         message.obstacleDetected = (state->x < 10);
 
-        // Send the message to motor control task
-        xMessageBufferSend(motorMessageBuffer, &message, sizeof(message), 0);
+        if (message.obstacleDetected) {
+            // Obstacle detected: rotate right to avoid it
+            rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-        // Send the message to the print task using a message buffer
-        xMessageBufferSend(printMessageBuffer, &message, sizeof(message), 0);
-
-        // Delay between readings to avoid excessive polling
-        vTaskDelay(pdMS_TO_TICKS(5));
-    }
-}
-// Print task to log ultrasonic data
-void print_task(void *pvParameters) {
-    DistanceMessage receivedMessage;
-    while (true) {
-        // Print ultrasonic data
-        if (xMessageBufferReceive(printMessageBuffer, &receivedMessage, sizeof(receivedMessage), portMAX_DELAY) > 0) {
-            printf("Distance: %.2lf cm\n", receivedMessage.distance);
+            // After rotation, resume moving forward
+            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1.0);
+   
+        } else {
+            // No obstacle detected, continue moving forward
+            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN, 1.0);
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+
+        vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed
     }
 }
 
-void ultrasonic_init_buffers() {
-    printMessageBuffer = xMessageBufferCreate(256);
-    if (printMessageBuffer == NULL) {
-        printf("Failed to create print message buffer\n");
-        while (true);  // Halt if buffer creation fails
-    }
-}
 
-// Set up the ultrasonic sensor pins
+// Set up the ultrasonic sensor pins with interrupt for ECHOPIN
 void setupUltrasonicPins() {
     gpio_init(TRIGPIN);
-    gpio_init(ECHOPIN);
     gpio_set_dir(TRIGPIN, GPIO_OUT);
+
+    gpio_init(ECHOPIN);
     gpio_set_dir(ECHOPIN, GPIO_IN);
 
-    // No need to set up an interrupt for ECHOPIN here, as it’s now in the encoder file
+    // Enable interrupt on ECHOPIN for both rising and falling edges
+    gpio_set_irq_enabled_with_callback(ECHOPIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &ultrasonic_echo_callback);
 }
