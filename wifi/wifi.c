@@ -234,7 +234,7 @@ void main_task(void *pvParameters)
                 {
                     publish_to_topic(topic, command);
                     // vTaskDelay(pdMS_TO_TICKS(250));
-                    vTaskDelay(pdMS_TO_TICKS(200));
+                    vTaskDelay(pdMS_TO_TICKS(75));
                 }
             }
 
