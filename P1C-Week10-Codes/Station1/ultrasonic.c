@@ -44,48 +44,64 @@ void ultrasonic_echo_callback(uint gpio, uint32_t events) {
     }
 }
 
-# 
 void ultrasonic_task(void *pvParameters) {
     kalman_state *state = (kalman_state *)pvParameters;
     double measured;
     DistanceMessage message;
+    uint32_t initial_notch_count, target_notch_count;
 
+    // Initialize ultrasonic pins and motor pins
     setupUltrasonicPins();
     init_motor_pins();
     setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-    while (true) {
+    while (1) {
+        // Trigger ultrasonic sensor
         gpio_put(TRIGPIN, 1);
         sleep_us(10);
         gpio_put(TRIGPIN, 0);
 
+        // Calculate distance from pulse width
         measured = pulse_width / 29.0 / 2.0;
 
+        // Update Kalman filter
         kalman_update(state, measured);
 
+        // Get filtered distance and obstacle status
         message.distance = state->x;
-        message.obstacleDetected = (state->x < 10);
+        message.obstacleDetected = (state->x < 10);  // Obstacle detected if distance < 10 cm
 
         if (message.obstacleDetected) {
-            // Obstacle detected: rotate right to avoid it
+            // Obstacle detected: rotate right
+            stop_motors();  // Stop motors before rotation
             rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            vTaskDelay(pdMS_TO_TICKS(1000));  // Delay for rotation (adjust as needed)
 
-            // After rotation, resume moving forward
+            // Move forward by 90 cm based on notch counts (88 notches = 90 cm)
+            initial_notch_count = left_notch_count;  // Get the current notch count
+            target_notch_count = initial_notch_count + 88;  // Set target notch count
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-            vTaskDelay(pdMS_TO_TICKS(5500));  // Adjust delay as needed
+
+            while (left_notch_count < target_notch_count) {
+                vTaskDelay(pdMS_TO_TICKS(10));  // Check notch count periodically
+            }
+
+            // Stop motors after moving 90 cm
             stop_motors();
+
+            // Exit task after avoiding obstacle
             vTaskDelete(NULL);
-   
         } else {
             // No obstacle detected, continue moving forward
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
         }
 
-        vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed
+        // Delay for next ultrasonic measurement
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
-
 
 // Set up the ultrasonic sensor pins with interrupt for ECHOPIN
 void setupUltrasonicPins() {
