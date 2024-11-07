@@ -38,6 +38,7 @@ static void mqtt_pub_start_cb(void *arg, const char *topic, u32_t tot_len)
     }
 }
 
+// When data is received, this callback is called
 static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
                              u8_t flags)
 {
@@ -55,15 +56,18 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
     }
 }
 
+// Callback for when a publish request is completed
 void mqtt_pub_request_cb(void *arg, err_t err)
 {
     
 }
 
+// Callback for when a subscribe/unsubscribe request is completed
 void mqtt_sub_request_cb(void *arg, err_t err)
 {
 }
 
+// Callback for when a connection is established
 static void mqtt_connection_cb(mqtt_client_t *client, void *arg,
                                mqtt_connection_status_t status)
 {
@@ -77,6 +81,7 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg,
     }
 }
 
+// Not needed, was from example code. Remains here just to refer
 // err_t mqtt_test_publish(MQTT_CLIENT_T *mqtt_state)
 // {
 //     char buffer[256];
@@ -96,6 +101,7 @@ static void mqtt_connection_cb(mqtt_client_t *client, void *arg,
 //     return err;
 // }
 
+// Connect to the MQTT server
 err_t mqtt_test_connect(MQTT_CLIENT_T *mqtt_state, const char *topic)
 {
     struct mqtt_connect_client_info_t ci;
@@ -132,6 +138,7 @@ err_t mqtt_test_connect(MQTT_CLIENT_T *mqtt_state, const char *topic)
     return err;
 }
 
+// Run the MQTT test (but not in use right now)
 void mqtt_run_test(MQTT_CLIENT_T *mqtt_statee)
 {
 
@@ -140,6 +147,7 @@ void mqtt_run_test(MQTT_CLIENT_T *mqtt_statee)
     }
 }
 
+// Subscribe to a topic
 void subscribe_to_topic(const char *topic)
 {
     if (strcmp(topic, "car") == 0)
@@ -154,6 +162,7 @@ void subscribe_to_topic(const char *topic)
     }
 }
 
+// Publish to a topic
 void publish_to_topic(const char *topic, const char *message)
 {
     err_t err;
@@ -174,6 +183,7 @@ void publish_to_topic(const char *topic, const char *message)
     return;
 }
 
+// Main task for wifi. Starts wifi, connects to wifi, connects to MQTT server, subscribes to topic (if relevant), and then sends messages to the topic
 void main_task(void *pvParameters)
 {
     topic = (char *)pvParameters;
@@ -238,6 +248,7 @@ void main_task(void *pvParameters)
                 }
             }
 
+            // This code is for when integrating to the 3 Picos for week 13
             // if (strcmp(topic, "car") == 0)
             // {
             //     publish_to_topic(topic, "Hello from car to dashboard");
