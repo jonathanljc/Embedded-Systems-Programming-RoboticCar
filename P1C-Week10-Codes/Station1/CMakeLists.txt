@@ -13,13 +13,46 @@ target_include_directories(car PRIVATE
 add_library(ultrasonic_lib
         ultrasonic.c
 )
+# Pull in the Pico SDK's standard libraries (this includes stdio, GPIO, and more)
+target_link_libraries(ultrasonic_lib
+    pico_stdlib          # Standard libraries
+    hardware_gpio        # GPIO control
+    hardware_timer       # Timer control
+    FreeRTOS-Kernel      # FreeRTOS kernel
+    FreeRTOS-Kernel-Heap4  # FreeRTOS heap
+    motor_lib            # Motor library
+)
+
 # for encoder library
 add_library(encoder_lib
         encoder.c
 )
+
+# Link libraries for encoder
+target_link_libraries(encoder_lib
+    pico_stdlib          # Standard libraries
+    hardware_gpio        # GPIO control
+    hardware_timer       # Timer control
+    FreeRTOS-Kernel      # FreeRTOS kernel
+    FreeRTOS-Kernel-Heap4  # FreeRTOS heap
+    ultrasonic_lib       # Link the ultrasonic library here
+)
+
 # for motor & pid library (name as motor_lib combined)
 add_library(motor_lib
         motor.c pid.c
+)
+
+# Pull in the Pico SDK's standard libraries (this includes stdio, GPIO, and more)
+target_link_libraries(motor_lib
+    pico_stdlib
+    hardware_pwm          # Standard libraries
+    hardware_gpio        # GPIO control
+    hardware_timer       # Timer control
+    FreeRTOS-Kernel      # FreeRTOS kernel
+    FreeRTOS-Kernel-Heap4  # FreeRTOS heap
+    encoder_lib
+    ultrasonic_lib
 )
 
 # all the libraries required by the car executable

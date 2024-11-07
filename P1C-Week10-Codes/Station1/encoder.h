@@ -39,6 +39,7 @@ extern TaskHandle_t leftPulseTaskHandle;
 extern TaskHandle_t leftSpeedTaskHandle;
 extern TaskHandle_t rightPulseTaskHandle;
 extern TaskHandle_t rightSpeedTaskHandle;
+extern volatile uint32_t left_notch_count;
 
 // Function declarations
 // encoder.h

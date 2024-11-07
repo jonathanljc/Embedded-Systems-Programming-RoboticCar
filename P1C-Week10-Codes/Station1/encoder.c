@@ -2,7 +2,8 @@
 #include "ultrasonic.h"
 
 // Encoder variables for the left encoder
-static volatile uint32_t left_notch_count = 0;
+volatile uint32_t left_notch_count = 0; // Corrected type
+
 static volatile uint32_t left_last_rising_time = 0;
 static volatile uint32_t left_last_falling_time = 0;
 static uint32_t left_pulse_width = 0;

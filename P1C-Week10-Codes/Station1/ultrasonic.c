@@ -1,5 +1,6 @@
 #include "ultrasonic.h"
 #include "motor.h"
+#include "encoder.h"
 
 // Define external variables
 volatile absolute_time_t start_time;
