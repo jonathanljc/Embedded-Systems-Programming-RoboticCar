@@ -46,7 +46,7 @@ add_executable(dashboard
 target_include_directories(dashboard PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
-        ${CMAKE_SOURCE_DIR}/wifi
+        # ${CMAKE_SOURCE_DIR}/wifi
 )
 
 target_compile_definitions(dashboard PRIVATE
@@ -60,6 +60,9 @@ target_link_libraries(dashboard
         wifi_lib
 )
 
+pico_add_extra_outputs(dashboard)
+pico_enable_stdio_usb(dashboard 1)
+
 # Remote2 executable
 add_executable(remote2
         remote2.c
@@ -68,8 +71,8 @@ add_executable(remote2
 target_include_directories(remote2 PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts
-        ${CMAKE_SOURCE_DIR}/wifi
-        ${CMAKE_SOURCE_DIR}/magnetometer
+        # ${CMAKE_SOURCE_DIR}/wifi
+        # ${CMAKE_SOURCE_DIR}/magnetometer
 )
 
 target_compile_definitions(remote2 PRIVATE
