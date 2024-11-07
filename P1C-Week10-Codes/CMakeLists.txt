@@ -24,14 +24,7 @@ include_directories(${CMAKE_SOURCE_DIR})  # Add root directory to include path
 
 
 if (NOT PICO_NO_HARDWARE)
-    # COMMENT OUT THE OTHER FOLDERS FIRST JUST FOR WEEK 10 SUBMISSION, ONCE DONE, UNCOMMENT THEM AND COMMENT OUT THE WEEK10 ONE - Felix
-    
-    # add_subdirectory(ultrasonic)
-    # add_subdirectory(encoder)
-    # add_subdirectory(magnetometer)
-    # add_subdirectory(wifi)
-    # add_subdirectory(motor)
-    # add_subdirectory(main)
-    add_subdirectory(P1C-Week10-Codes)
-    # add_subdirectory(irline)
+    add_subdirectory(Station1)
+    add_subdirectory(Station2)
+    add_subdirectory(Station3)
 endif ()
