@@ -19,8 +19,8 @@ void main_fn() {
 // Timer callback function
 bool repeating_timer_callback(struct repeating_timer *t) {
     static bool led_state = false;
-    gpio_put(LED_PIN2, led_state);  // Toggle LED
     led_state = !led_state;  // Flip state for next toggle
+    gpio_put(LED_PIN2, led_state);  // Toggle LED
 
     printf("Timer triggered! LED is now %s\n", led_state ? "ON" : "OFF");
     return true;  // Return true to keep the timer repeating
