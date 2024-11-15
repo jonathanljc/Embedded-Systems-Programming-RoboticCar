@@ -44,7 +44,6 @@ void ultrasonic_echo_callback(uint gpio, uint32_t events) {
     }
 }
 
-# 
 void ultrasonic_task(void *pvParameters) {
     kalman_state *state = (kalman_state *)pvParameters;
     double measured;
