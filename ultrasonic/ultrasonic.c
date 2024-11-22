@@ -57,146 +57,80 @@ void ultrasonic_task(void *pvParameters) {
     setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
     while (true) {
+        // Trigger the ultrasonic sensor
         gpio_put(TRIGPIN, 1);
         sleep_us(10);
         gpio_put(TRIGPIN, 0);
 
+        // Calculate the distance
         measured = pulse_width / 29.0 / 2.0;
-
         kalman_update(state, measured);
 
         message.distance = state->x;
         message.obstacleDetected = (state->x < 10);
 
         if (message.obstacleDetected) {
-            // Obstacle detected: rotate right to avoid it
+            printf("Obstacle detected: %.2f cm\n", message.distance);
             stop_motors();
-        } else if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), portMAX_DELAY) > 0) {
-            printf("ULTRASONIC Received: %s\n", command);
-            // printf("First 4 char: %c%c%c%c\n", command[0], command[1], command[2], command[3]);
-            // printf("Instruction: %c\n", command[5]);
-            // printf("Speed: %c\n", command[strlen(command) - 3]);
+        } else {
+            // Check for commands in a non-blocking manner
+            if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), 0) > 0) {
+                printf("ULTRASONIC Received: %s\n", command);
 
-            // Parse the instruction and speed from the command
-            char stopCheck = command[0];
-            char instruction = command[5];
-            char speed = command[strlen(command) - 3];
+                // Parse the instruction and speed from the command
+                char stopCheck = command[0];
+                char instruction = command[5];
+                char speed = command[strlen(command) - 3];
 
-            // Check if the command is "stop"
-            if(stopCheck == 's') {
-                stop_motors();
-                printf("STOP\n");
-            }else{
-                // Use switch-case to call the appropriate motor function
-                switch (instruction) {
-                    case 'f':  // Move forward
-                        move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("FORWARD\n");
-                        break;
-                    case 'b':  // Stop
-                        move_backward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("BACKWARD\n");
-                        break;
-                    case 'l':  // Rotate left
-                        rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("LEFT\n");
-                        break;
-                    case 'r':  // Rotate right
-                        rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("RIGHT\n");
-                        break;
-                    default:
-                        printf("Unknown instruction: %c\n", instruction);
-                        break;
-                }
+                // Check if the command is "stop"
+                if (stopCheck == 's') {
+                    stop_motors();
+                    printf("STOP\n");
+                } else {
+                    // Use switch-case to call the appropriate motor function
+                    switch (instruction) {
+                        case 'f':  // Move forward
+                            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("FORWARD\n");
+                            break;
+                        case 'b':  // Move backward
+                            move_backward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("BACKWARD\n");
+                            break;
+                        case 'l':  // Rotate left
+                            rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("LEFT\n");
+                            break;
+                        case 'r':  // Rotate right
+                            rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("RIGHT\n");
+                            break;
+                        default:
+                            printf("Unknown instruction: %c\n", instruction);
+                            break;
+                    }
 
-                // Use switch-case to set the speed
-                switch (speed) {
-                    case '4':  // Set speed to 50%
-                        set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("SPEED 40\n");
-                        break;
-                    case '7':  // Set speed to 70%
-                        set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("SPEED 70\n");
-                        break;
-                    case '0':  // Set speed to 100%
-                        set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("SPEED 100\n");
-                        break;
-                    default:
-                        printf("Unknown speed: %c\n", speed);
-                        break;
+                    // Use switch-case to set the speed
+                    switch (speed) {
+                        case '4':  // Set speed to 40%
+                            set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("SPEED 40\n");
+                            break;
+                        case '7':  // Set speed to 70%
+                            set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("SPEED 70\n");
+                            break;
+                        case '0':  // Set speed to 100%
+                            set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            printf("SPEED 100\n");
+                            break;
+                        default:
+                            printf("Unknown speed: %c\n", speed);
+                            break;
+                    }
                 }
             }
         }
-        
-        else {
-            // No obstacle detected, continue moving forward
-           stop_motors();
-        }
-
-
-        // If wifiReceiveBuffer is not NULL, print the message in buffer
-        /*if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), portMAX_DELAY) > 0) {
-            printf("ULTRASONIC Received: %s\n", command);
-            // printf("First 4 char: %c%c%c%c\n", command[0], command[1], command[2], command[3]);
-            // printf("Instruction: %c\n", command[5]);
-            // printf("Speed: %c\n", command[strlen(command) - 3]);
-
-            // Parse the instruction and speed from the command
-            char stopCheck = command[0];
-            char instruction = command[5];
-            char speed = command[strlen(command) - 3];
-
-            // Check if the command is "stop"
-            if(stopCheck == 's') {
-                stop_motors();
-                printf("STOP\n");
-            }else{
-                // Use switch-case to call the appropriate motor function
-                switch (instruction) {
-                    case 'f':  // Move forward
-                        move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("FORWARD\n");
-                        break;
-                    case 'b':  // Stop
-                        move_backward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("BACKWARD\n");
-                        break;
-                    case 'l':  // Rotate left
-                        rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("LEFT\n");
-                        break;
-                    case 'r':  // Rotate right
-                        rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("RIGHT\n");
-                        break;
-                    default:
-                        printf("Unknown instruction: %c\n", instruction);
-                        break;
-                }
-
-                // Use switch-case to set the speed
-                switch (speed) {
-                    case '4':  // Set speed to 50%
-                        set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("SPEED 40\n");
-                        break;
-                    case '7':  // Set speed to 70%
-                        set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("SPEED 70\n");
-                        break;
-                    case '0':  // Set speed to 100%
-                        set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                        printf("SPEED 100\n");
-                        break;
-                    default:
-                        printf("Unknown speed: %c\n", speed);
-                        break;
-                }
-            } 
-        } */
 
         vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed
     }
