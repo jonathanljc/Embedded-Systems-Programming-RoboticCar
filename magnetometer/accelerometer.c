@@ -90,23 +90,31 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
     float speed = sqrt(accel_data->x * accel_data->x + accel_data->y * accel_data->y) / 9.81; // Normalize to g-force
     speed = fmin(speed, 1.0) * 100; // Cap speed to 100%
 
-    // Round speed to nearest multiple of 10
-    int rounded_speed = ((int)(speed + 5) / 10) * 10;
+    // Map speed to thresholds: 0%, 40%, 70%, or 100%
+    int mapped_speed;
+    if (speed <= 20)
+        mapped_speed = 0;
+    else if (speed <= 55)
+        mapped_speed = 40;
+    else if (speed <= 85)
+        mapped_speed = 70;
+    else
+        mapped_speed = 100;
 
-    // If rounded speed is 0%, set command to "stop"
-    if (rounded_speed == 0) {
+    // If mapped speed is 0%, set command to "stop"
+    if (mapped_speed == 0) {
         snprintf(command_buffer, 50, "stop");
         return;
     }
 
-    // Determine control command based on direction and rounded speed
+    // Determine control command based on direction and mapped speed
     if (fabs(accel_data->y) > fabs(accel_data->x))
     {
-        snprintf(command_buffer, 50, "turn %s at %d%% speed", accel_data->y > 0 ? "left" : "right", rounded_speed);
+        snprintf(command_buffer, 50, "turn %s at %d%% speed", accel_data->y > 0 ? "left" : "right", mapped_speed);
     }
     else
     {
-        snprintf(command_buffer, 50, "move %s at %d%% speed", accel_data->x > 0 ? "forward" : "backward", rounded_speed);
+        snprintf(command_buffer, 50, "move %s at %d%% speed", accel_data->x > 0 ? "forward" : "backward", mapped_speed);
     }
 }
 
