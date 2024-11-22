@@ -11,7 +11,7 @@
 #define ENCODER_H
 // Definitions
 #define LEFT_WHEEL_ENCODER_PIN 8
-#define RIGHT_WHEEL_ENCODER_PIN 26
+#define RIGHT_WHEEL_ENCODER_PIN 6
 #define ENCODER_NOTCHES_PER_REV 20
 #define WHEEL_DIAMETER 0.065
 #define WHEEL_CIRCUMFERENCE 0.2042
@@ -39,6 +39,8 @@ extern TaskHandle_t leftPulseTaskHandle;
 extern TaskHandle_t leftSpeedTaskHandle;
 extern TaskHandle_t rightPulseTaskHandle;
 extern TaskHandle_t rightSpeedTaskHandle;
+
+
 
 // Function declarations
 // encoder.h

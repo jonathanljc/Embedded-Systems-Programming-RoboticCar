@@ -26,6 +26,7 @@ TaskHandle_t leftSpeedTaskHandle;
 TaskHandle_t rightPulseTaskHandle = NULL;
 TaskHandle_t rightSpeedTaskHandle;
 
+
 MessageBufferHandle_t leftMessageBuffer;
 MessageBufferHandle_t rightMessageBuffer;
 
@@ -112,11 +113,11 @@ void left_speed_task(void *pvParameters) {
             float average_speed = calculate_moving_average(left_speed_buffer, AVERAGE_FILTER_SIZE);
 
             float total_distance = left_notch_count * DISTANCE_PER_NOTCH;
-            PulseData_t data = { left_pulse_width, average_speed, total_distance, left_notch_count };
+            //PulseData_t data = { left_pulse_width, average_speed, total_distance, left_notch_count };
             
-            // Send data to the motor control buffer
-            xMessageBufferSend(leftMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
-            xMessageBufferSend(leftMessageBuffer, &data, sizeof(data), portMAX_DELAY);
+            printf("Left Speed: %.2f m/s, Distance: %.2f m\n", average_speed, total_distance);
+
+            //xMessageBufferSend(leftMessageBuffer, &data, sizeof(data), portMAX_DELAY);
         }
     }
 }
@@ -135,34 +136,34 @@ void right_speed_task(void *pvParameters) {
             float average_speed = calculate_moving_average(right_speed_buffer, AVERAGE_FILTER_SIZE);
 
             float total_distance = right_notch_count * DISTANCE_PER_NOTCH;
-            PulseData_t data = { right_pulse_width, average_speed, total_distance, right_notch_count };
+            //PulseData_t data = { right_pulse_width, average_speed, total_distance, right_notch_count };
             
-            // Send data to the motor control buffer
-            xMessageBufferSend(rightMotorControlBuffer, &data, sizeof(data), portMAX_DELAY);
-            xMessageBufferSend(rightMessageBuffer, &data, sizeof(data), portMAX_DELAY);
+            printf("Right Speed: %.2f m/s, Distance: %.2f m\n", average_speed, total_distance);
+
+            //xMessageBufferSend(rightMessageBuffer, &data, sizeof(data), portMAX_DELAY);
         }
     }
 }
 
 // Task for logging left wheel data
-void left_log_task(void *pvParameters) {
-    while (1) {
-        PulseData_t received_data;
-        xMessageBufferReceive(leftMessageBuffer, &received_data, sizeof(received_data), portMAX_DELAY);
-        printf("Left Wheel -> Notch Count: %u, Pulse Width: %u us, Speed: %.3f m/s, Total Distance: %.3f m\n",
-               received_data.notch_count, received_data.pulse_width, received_data.speed, received_data.total_distance);
-    }
-}
+//void left_log_task(void *pvParameters) {
+    //while (1) {
+        //PulseData_t received_data;
+        //xMessageBufferReceive(leftMessageBuffer, &received_data, sizeof(received_data), portMAX_DELAY);
+        //printf("Left Wheel -> Notch Count: %u, Pulse Width: %u us, Speed: %.3f m/s, Total Distance: %.3f m\n",
+               //received_data.notch_count, received_data.pulse_width, received_data.speed, received_data.total_distance);
+   //}
+//}
 
 // Task for logging right wheel data
-void right_log_task(void *pvParameters) {
-    while (1) {
-        PulseData_t received_data;
-        xMessageBufferReceive(rightMessageBuffer, &received_data, sizeof(received_data), portMAX_DELAY);
-        printf("Right Wheel -> Notch Count: %u, Pulse Width: %u us, Speed: %.3f m/s, Total Distance: %.3f m\n",
-               received_data.notch_count, received_data.pulse_width, received_data.speed, received_data.total_distance);
-    }
-}
+//void right_log_task(void *pvParameters) {
+    //while (1) {
+        //PulseData_t received_data;
+        //xMessageBufferReceive(rightMessageBuffer, &received_data, sizeof(received_data), portMAX_DELAY);
+        //printf("Right Wheel -> Notch Count: %u, Pulse Width: %u us, Speed: %.3f m/s, Total Distance: %.3f m\n",
+               //received_data.notch_count, received_data.pulse_width, received_data.speed, received_data.total_distance);
+    //}
+//}
 
 void encoder_init() {
     // Create pulse width and speed tasks for both left and right encoders
@@ -177,10 +178,10 @@ void encoder_init() {
     xTaskCreate(left_speed_task, "Left Speed Task", 256, NULL, 1, &leftSpeedTaskHandle);
     xTaskCreate(right_pulse_width_task, "Right Pulse Width Task", 256, NULL, 1, &rightPulseTaskHandle);
     xTaskCreate(right_speed_task, "Right Speed Task", 256, NULL, 1, &rightSpeedTaskHandle);
-
+    //xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, NULL, 1, &ultrasonicTaskHandle);
     // Create logging tasks for both left and right encoders
-    xTaskCreate(left_log_task, "Left Encoder Log Task", 256, NULL, 1, NULL);
-    xTaskCreate(right_log_task, "Right Encoder Log Task", 256, NULL, 1, NULL);
+    //xTaskCreate(left_log_task, "Left Encoder Log Task", 256, NULL, 1, NULL);
+    //xTaskCreate(right_log_task, "Right Encoder Log Task", 256, NULL, 1, NULL);
 }
 
 

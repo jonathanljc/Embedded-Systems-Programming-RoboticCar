@@ -81,6 +81,7 @@ target_link_libraries(car
         encoder_lib       # Link the encoder library
         motor_lib         # Link the motor library
         irsensor_lib      # Link the irsensor library
+        wifi_lib          # Link the wifi library
 )
 
 
