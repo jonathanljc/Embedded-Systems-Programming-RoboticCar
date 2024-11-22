@@ -176,7 +176,7 @@ void publish_to_topic(const char *topic, const char *message)
     }
     else if (strcmp(topic, "remote") == 0)
     {
-        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/car", message, strlen(message), MQTT_QOS, 0, mqtt_pub_request_cb, 0);
+        err = mqtt_publish(mqtt_state->mqtt_client, "inf2004/p1c/remote", message, strlen(message), MQTT_QOS, 0, mqtt_pub_request_cb, 0);
     }
 
     if(err == ERR_OK){

@@ -3,6 +3,7 @@
 
 // Define the global message buffer
 MessageBufferHandle_t wifiMessageBuffer;
+MessageBufferHandle_t wifiReceiveBuffer;
 
 int main()
 {
