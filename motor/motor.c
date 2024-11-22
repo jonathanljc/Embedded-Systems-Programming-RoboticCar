@@ -71,6 +71,7 @@ void move_forward(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
+    printf("FORWARD DONE\n");
 }
 
 void move_backward(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -78,6 +79,7 @@ void move_backward(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 1);
     gpio_put(R_MOTOR_DIR_PIN1, 0);
     gpio_put(R_MOTOR_DIR_PIN2, 1);
+    printf("BACKWARD DONE\n");
 }
 
 void stop_motors() {
@@ -91,6 +93,7 @@ void rotate_left(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 1);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
+    printf("LEFT DONE\n");
 }
 
 // Rotate right function 
@@ -99,6 +102,7 @@ void rotate_right(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 0);
     gpio_put(R_MOTOR_DIR_PIN2, 1);
+    printf("RIGHT DONE\n");
 }
 void set_left_motor_speed(uint32_t gpio, float speed) {
     // Calculate the duty cycle
