@@ -1,14 +1,12 @@
 #include "ultrasonic.h"
 #include "motor.h"
 #include <string.h>
+#include "encoder.h"
 
 // Define external variables
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width;
 volatile bool obstacleDetected;
-
-// Define and initialize the message buffer
-MessageBufferHandle_t printMessageBuffer;
 
 
 // Initialize the Kalman filter state
@@ -51,7 +49,7 @@ void ultrasonic_task(void *pvParameters) {
     double measured;
     DistanceMessage message;
     char command[100];
-
+    init_encoder_gpio();
     setupUltrasonicPins();
     init_motor_pins();
     setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
@@ -61,7 +59,7 @@ void ultrasonic_task(void *pvParameters) {
         gpio_put(TRIGPIN, 1);
         sleep_us(10);
         gpio_put(TRIGPIN, 0);
-
+        poll_encoder();
         // Calculate the distance
         measured = pulse_width / 29.0 / 2.0;
         kalman_update(state, measured);
@@ -76,7 +74,7 @@ void ultrasonic_task(void *pvParameters) {
             // Check for commands in a non-blocking manner
             if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), 0) > 0) {
                 printf("ULTRASONIC Received: %s\n", command);
-
+                
                 // Parse the instruction and speed from the command
                 char stopCheck = command[0];
                 char instruction = command[5];
