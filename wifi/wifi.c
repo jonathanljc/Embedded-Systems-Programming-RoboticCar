@@ -1,5 +1,8 @@
 #include "wifi.h"
+#include "hardware/gpio.h"
 
+#define LED_2 2
+#define LED_5 5
 
 #define MQTT_QOS 1
 u32_t data_in = 0;
@@ -158,11 +161,15 @@ void subscribe_to_topic(const char *topic)
     {
         mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/remote", MQTT_QOS, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/remote\n");
+        gpio_put(4, 1);
+        gpio_put(5, 1);
     }
     else if (strcmp(topic, "dashboard") == 0)
     {
         mqtt_sub_unsub(mqtt_state->mqtt_client, "inf2004/p1c/car", MQTT_QOS, mqtt_sub_request_cb, 0, 1);
         printf("Subscribed to inf2004/p1c/car\n");
+        gpio_put(4, 1);
+        gpio_put(5, 1);
     }
 }
 
@@ -192,6 +199,11 @@ void main_task(void *pvParameters)
 {
     topic = (char *)pvParameters;
 
+    for (uint pin = LED_2; pin <= LED_5; pin++) {
+        gpio_init(pin);
+        gpio_set_dir(pin, GPIO_OUT);
+    }
+
     if (cyw43_arch_init())
     {
         printf("failed to initialise\n");
@@ -202,6 +214,8 @@ void main_task(void *pvParameters)
 
     printf("Connecting to WiFi...\n");
     cyw43_arch_wifi_connect_timeout_ms("Felix-iPhone", "felixfelix", CYW43_AUTH_WPA2_AES_PSK, 30000);
+    gpio_put(2, 1);
+    gpio_put(3, 1);
     printf("Connected.\n");
 
     DEBUG_printf("Pi IP at %s\n", ip4addr_ntoa(netif_ip4_addr(netif_list)));
