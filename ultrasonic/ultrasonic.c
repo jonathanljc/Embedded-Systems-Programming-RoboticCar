@@ -113,8 +113,8 @@ void ultrasonic_task(void *pvParameters) {
 
                 // Use switch-case to set the speed
                 switch (speed) {
-                    case '5':  // Set speed to 50%
-                        set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                    case '4':  // Set speed to 50%
+                        set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                         break;
                     case '7':  // Set speed to 70%
                         set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);

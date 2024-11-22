@@ -21,12 +21,12 @@
 void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight);
 void init_motor_pins();
 void move_forward(uint32_t gpioLeft, uint32_t gpioRight);
-// void move_backward(uint32_t gpioLeft, uint32_t gpioRight, float speed);  // Add only if defined in motor.c
+void move_backward(uint32_t gpioLeft, uint32_t gpioRight);
 void rotate_left(uint32_t gpioLeft, uint32_t gpioRight);
 void rotate_right(uint32_t gpioLeft, uint32_t gpioRight);
 void stop_motors();
 void set_motor_speed(uint32_t gpio, float speed, bool is_left);
-void set_speed50(uint32_t gpioLeft, uint32_t gpioRight);
+void set_speed40(uint32_t gpioLeft, uint32_t gpioRight);
 void set_speed70(uint32_t gpioLeft, uint32_t gpioRight);
 void set_speed100(uint32_t gpioLeft, uint32_t gpioRight);
 void set_left_motor_speed(uint32_t gpio, float speed);
