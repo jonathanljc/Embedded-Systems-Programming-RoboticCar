@@ -12,6 +12,7 @@ u8_t data_len = 0;
 
 int counter = 0;
 char *topic;
+bool dashboard = false;
 
 MQTT_CLIENT_T *mqtt_state;
 
@@ -58,7 +59,11 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
             // Place the data into the message buffer
             char command[100];
             strncpy(command, (char *)&buffer, sizeof(buffer));
-            xMessageBufferSend(wifiReceiveBuffer, command, strlen(command) + 1, 0);
+            if(!dashboard){
+                xMessageBufferSend(wifiReceiveBuffer, command, strlen(command) + 1, 0);
+            }else{
+                printf("Received: %s\n", command);
+            }
         }
     }
 }
@@ -243,6 +248,10 @@ void main_task(void *pvParameters)
     mqtt_set_inpub_callback(mqtt_state->mqtt_client, mqtt_pub_start_cb,
                             mqtt_pub_data_cb, 0);
 
+    if(strcmp(topic, "dashboard") == 0){
+        dashboard = true;
+    }
+
     while (1)
     {
         if (mqtt_client_is_connected(mqtt_state->mqtt_client))
@@ -255,7 +264,7 @@ void main_task(void *pvParameters)
                 subscribed = true;
             }
 
-            if (strcmp(topic, "remote") == 0)
+            if (strcmp(topic, "remote") == 0 || strcmp(topic, "car") == 0)
             {
                 char command[50];
                 if (xMessageBufferReceive(wifiMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)

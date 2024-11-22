@@ -2,6 +2,7 @@
 
 // Define the global message buffer
 MessageBufferHandle_t wifiMessageBuffer;
+MessageBufferHandle_t wifiReceiveBuffer;
 
 int main()
 {
@@ -11,7 +12,7 @@ int main()
 
     wifiMessageBuffer = xMessageBufferCreate(1024);
 
-    xTaskCreate(main_task, "TestMainThread", 256, "dashboard", 1, NULL);
+    xTaskCreate(main_task, "Wifi Task", 256, "dashboard", 1, NULL);
 
     // Start the FreeRTOS scheduler
     vTaskStartScheduler();
