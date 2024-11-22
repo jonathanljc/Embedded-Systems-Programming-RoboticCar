@@ -57,12 +57,12 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
             buffer[data_len] = 0;
             // DEBUG_printf("WIFI: %s\n", &buffer);
             // Place the data into the message buffer
-            char command[100];
-            strncpy(command, (char *)&buffer, sizeof(buffer));
             if(!dashboard){
+                char command[100];
+                strncpy(command, (char *)&buffer, sizeof(buffer));
                 xMessageBufferSend(wifiReceiveBuffer, command, strlen(command) + 1, 0);
             }else{
-                printf("Received: %s\n", command);
+                printf("%s\n", &buffer);
             }
         }
     }
@@ -218,8 +218,8 @@ void main_task(void *pvParameters)
     cyw43_arch_enable_sta_mode();
 
     printf("Connecting to WiFi...\n");
-    cyw43_arch_wifi_connect_timeout_ms("Felix-iPhone", "felixfelix", CYW43_AUTH_WPA2_AES_PSK, 30000);
     gpio_put(2, 1);
+    cyw43_arch_wifi_connect_timeout_ms("Felix-iPhone", "felixfelix", CYW43_AUTH_WPA2_AES_PSK, 30000);
     gpio_put(3, 1);
     printf("Connected.\n");
 
