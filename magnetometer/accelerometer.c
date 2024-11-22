@@ -110,11 +110,11 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
     // Determine control command based on direction and mapped speed
     if (fabs(accel_data->y) > fabs(accel_data->x))
     {
-        snprintf(command_buffer, 50, "turn %s at %d%% speed", accel_data->y > 0 ? "left" : "right", mapped_speed);
+        snprintf(command_buffer, 50, "turn %s at %d%%", accel_data->y > 0 ? "left" : "right", mapped_speed);
     }
     else
     {
-        snprintf(command_buffer, 50, "move %s at %d%% speed", accel_data->x > 0 ? "forward" : "backward", mapped_speed);
+        snprintf(command_buffer, 50, "move %s at %d%%", accel_data->x > 0 ? "forward" : "backward", mapped_speed);
     }
 }
 
