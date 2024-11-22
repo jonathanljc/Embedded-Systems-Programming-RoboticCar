@@ -1,5 +1,6 @@
 #include "ultrasonic.h"
 #include "motor.h"
+#include <string.h>
 
 // Define external variables
 volatile absolute_time_t start_time;
@@ -85,7 +86,10 @@ void ultrasonic_task(void *pvParameters) {
         char command[512];
         // If wifiReceiveBuffer is not NULL, print the message in buffer
         if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), portMAX_DELAY) > 0) {
-            printf("ULTRASONIC: %s\n", command);
+            printf("ULTRASONIC Received: %s\n", command);
+            printf("First 4 char: %c%c%c%c\n", command[0], command[1], command[2], command[3]);
+            printf("Instruction: %c\n", command[5]);
+            printf("Speed: %c\n", command[strlen(command) - 3]);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed
