@@ -70,14 +70,6 @@ void ultrasonic_task(void *pvParameters) {
         if (message.obstacleDetected) {
             // Obstacle detected: rotate right to avoid it
             stop_motors();
-
-            // After rotation, resume moving forward
-            //move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-            //set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-            //vTaskDelay(pdMS_TO_TICKS(5500));  // Adjust delay as needed
-            //stop_motors();
-            //vTaskDelete(NULL);
-   
         } else {
             // No obstacle detected, continue moving forward
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
@@ -90,6 +82,51 @@ void ultrasonic_task(void *pvParameters) {
             printf("First 4 char: %c%c%c%c\n", command[0], command[1], command[2], command[3]);
             printf("Instruction: %c\n", command[5]);
             printf("Speed: %c\n", command[strlen(command) - 3]);
+
+            // Parse the instruction and speed from the command
+            char stopCheck = command[0];
+            char instruction = command[5];
+            char speed = command[strlen(command) - 3];
+
+            // Check if the command is "stop"
+            if(stopCheck == 's') {
+                stop_motors();
+            }else{
+                // Use switch-case to call the appropriate motor function
+                switch (instruction) {
+                    case 'f':  // Move forward
+                        move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    case 'b':  // Stop
+                        move_backward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    case 'l':  // Rotate left
+                        rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    case 'r':  // Rotate right
+                        rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    default:
+                        printf("Unknown instruction: %c\n", instruction);
+                        break;
+                }
+
+                // Use switch-case to set the speed
+                switch (speed) {
+                    case '5':  // Set speed to 50%
+                        set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    case '7':  // Set speed to 70%
+                        set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    case '0':  // Set speed to 100%
+                        set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        break;
+                    default:
+                        printf("Unknown speed: %c\n", speed);
+                        break;
+                }
+            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed
