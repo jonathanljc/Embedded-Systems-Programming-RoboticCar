@@ -62,7 +62,11 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
                 strncpy(command, (char *)&buffer, sizeof(buffer));
                 xMessageBufferSend(wifiReceiveBuffer, command, strlen(command) + 1, 0);
             }else{
-                printf("%s\n", &buffer);
+                // printf("-------------------\n");
+                // printf("%s\n", &buffer);
+                char command[100];
+                strncpy(command, (char *)&buffer, sizeof(buffer));
+                printf("%s\n", command);
             }
         }
     }
