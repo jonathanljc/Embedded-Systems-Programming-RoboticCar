@@ -51,8 +51,8 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left) {
 }
 
 void set_speed50(uint32_t gpioLeft, uint32_t gpioRight) {
-    set_motor_speed(gpioLeft, 0.5, true);
-    set_motor_speed(gpioRight, 0.5 * 0.91, false);
+    set_motor_speed(gpioLeft, 0.37, true);
+    set_motor_speed(gpioRight, 0.38, false);
 }
 
 void set_speed70(uint32_t gpioLeft, uint32_t gpioRight) {

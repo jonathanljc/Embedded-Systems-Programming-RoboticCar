@@ -9,6 +9,7 @@ volatile bool obstacleDetected;
 // Define and initialize the message buffer
 MessageBufferHandle_t printMessageBuffer;
 
+
 // Initialize the Kalman filter state
 kalman_state *kalman_init(double q, double r, double p, double initial_value) {
     kalman_state *state = calloc(1, sizeof(kalman_state));
@@ -67,18 +68,24 @@ void ultrasonic_task(void *pvParameters) {
 
         if (message.obstacleDetected) {
             // Obstacle detected: rotate right to avoid it
-            rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            stop_motors();
 
             // After rotation, resume moving forward
-            move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-            set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-            vTaskDelay(pdMS_TO_TICKS(5500));  // Adjust delay as needed
-            stop_motors();
-            vTaskDelete(NULL);
+            //move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            //set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            //vTaskDelay(pdMS_TO_TICKS(5500));  // Adjust delay as needed
+            //stop_motors();
+            //vTaskDelete(NULL);
    
         } else {
             // No obstacle detected, continue moving forward
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+        }
+
+        char command[512];
+        // If wifiReceiveBuffer is not NULL, print the message in buffer
+        if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), portMAX_DELAY) > 0) {
+            printf("ULTRASONIC: %s\n", command);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed

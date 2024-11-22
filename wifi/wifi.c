@@ -51,7 +51,11 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
         if (data_in == 0)
         {
             buffer[data_len] = 0;
-            DEBUG_printf("%s\n", &buffer);
+            // DEBUG_printf("WIFI: %s\n", &buffer);
+            // Place the data into the message buffer
+            char command[512];
+            strncpy(command, (char *)&buffer, sizeof(buffer));
+            xMessageBufferSend(wifiReceiveBuffer, command, strlen(command) + 1, 0);
         }
     }
 }

@@ -6,9 +6,15 @@
 #include "FreeRTOS.h" 
 #include "task.h" 
 #include "message_buffer.h" 
+#include "wifi.h"
  
 // Define the task handle for ultrasonic task 
 TaskHandle_t ultrasonicTaskHandle = NULL; 
+TaskHandle_t wifiTaskHandle = NULL;
+
+// Message buffer for wifi receive
+MessageBufferHandle_t wifiMessageBuffer;
+MessageBufferHandle_t wifiReceiveBuffer;
  
 int main() { 
     // Initialize standard I/O for serial output 
@@ -20,6 +26,10 @@ int main() {
  
     // Create tasks for ultrasonic and logging 
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 1, &ultrasonicTaskHandle); 
+
+    // Create a task for wifi (Wifi task should always be the last priority)
+    wifiReceiveBuffer = xMessageBufferCreate(512);
+    xTaskCreate(main_task, "Wifi Task", 256, "car", 1, &wifiTaskHandle);
  
     // Start the FreeRTOS scheduler 
     vTaskStartScheduler(); 

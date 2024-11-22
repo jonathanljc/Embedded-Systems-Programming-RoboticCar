@@ -31,6 +31,7 @@
 #define DEBUG_printf printf
 
 extern MessageBufferHandle_t wifiMessageBuffer;
+extern MessageBufferHandle_t wifiReceiveBuffer;
 
 typedef struct {
     ip_addr_t remote_addr;

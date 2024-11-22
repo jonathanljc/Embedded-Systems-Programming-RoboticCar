@@ -19,6 +19,7 @@ extern volatile absolute_time_t start_time;
 extern volatile uint64_t pulse_width;
 extern volatile bool obstacleDetected;
 extern MessageBufferHandle_t motorMessageBuffer;  // Message buffer for motor control
+extern MessageBufferHandle_t wifiReceiveBuffer;   // Message buffer for wifi receive
 
 // Structure to hold the distance and obstacle status
 typedef struct
