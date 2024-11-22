@@ -25,7 +25,7 @@ int main() {
     kalman_state *kalman = kalman_init(0.1, 1.0, 1.0, 50);  // You can adjust parameters as needed 
  
     // Create tasks for ultrasonic and logging 
-    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 2, &ultrasonicTaskHandle); 
+    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 1, &ultrasonicTaskHandle); 
 
     // Create a task for wifi (Wifi task should always be the last priority)
     wifiReceiveBuffer = xMessageBufferCreate(512);

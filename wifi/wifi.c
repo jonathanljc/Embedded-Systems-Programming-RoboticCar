@@ -7,7 +7,7 @@
 #define MQTT_QOS 1
 u32_t data_in = 0;
 
-u8_t buffer[512];
+u8_t buffer[100];
 u8_t data_len = 0;
 
 int counter = 0;
@@ -56,7 +56,7 @@ static void mqtt_pub_data_cb(void *arg, const u8_t *data, u16_t len,
             buffer[data_len] = 0;
             // DEBUG_printf("WIFI: %s\n", &buffer);
             // Place the data into the message buffer
-            char command[512];
+            char command[100];
             strncpy(command, (char *)&buffer, sizeof(buffer));
             xMessageBufferSend(wifiReceiveBuffer, command, strlen(command) + 1, 0);
         }

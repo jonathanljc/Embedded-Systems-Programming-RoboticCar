@@ -50,7 +50,7 @@ void ultrasonic_task(void *pvParameters) {
     kalman_state *state = (kalman_state *)pvParameters;
     double measured;
     DistanceMessage message;
-    char command[512];
+    char command[100];
 
     setupUltrasonicPins();
     init_motor_pins();
@@ -67,7 +67,7 @@ void ultrasonic_task(void *pvParameters) {
         kalman_update(state, measured);
 
         message.distance = state->x;
-        message.obstacleDetected = (state->x < 10);
+        message.obstacleDetected = (state->x < 15);
 
         if (message.obstacleDetected) {
             printf("Obstacle detected: %.2f cm\n", message.distance);
