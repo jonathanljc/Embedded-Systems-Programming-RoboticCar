@@ -1,15 +1,13 @@
 #include "encoder.h"
 #include <string.h>
 
-// Encoder variables for the left encoder
-static volatile uint32_t notch_count = 0;
-static uint32_t last_rising_time = 0;
-static uint32_t last_falling_time = 0;
-static uint32_t pulse_width = 0;
-
-// Speed buffer for moving average
-static float speed_buffer[AVERAGE_FILTER_SIZE] = {0};
-static int buffer_index = 0;
+// Define encoder states
+Encoder left_encoder = {0};  // Left encoder instance
+Encoder right_encoder = {0}; // Right encoder instance
+float left_average_speed = 0.0;
+float left_total_distance = 0.0;
+float right_average_speed = 0.0;
+float right_total_distance = 0.0;
 
 
 // Helper function to calculate moving average
@@ -20,47 +18,83 @@ float calculate_moving_average(float buffer[], int size) {
     }
     return sum / size;
 }
-// Function to initialize the GPIO pin for the encoder
+
+// Function to initialize GPIO pins for both encoders
 void init_encoder_gpio() {
-    gpio_init(LEFT_WHEEL_ENCODER_PIN);       // Initialize GPIO for the encoder
-    gpio_set_dir(LEFT_WHEEL_ENCODER_PIN, GPIO_IN);  // Set the pin as input
-    gpio_pull_up(LEFT_WHEEL_ENCODER_PIN);    // Enable pull-up resistor
-    //printf("Left encoder GPIO initialized on pin %d\n", LEFT_WHEEL_ENCODER_PIN);
+    // Initialize left encoder GPIO
+    gpio_init(LEFT_WHEEL_ENCODER_PIN);
+    gpio_set_dir(LEFT_WHEEL_ENCODER_PIN, GPIO_IN);
+    gpio_pull_up(LEFT_WHEEL_ENCODER_PIN);
+
+    // Initialize right encoder GPIO
+    gpio_init(RIGHT_WHEEL_ENCODER_PIN);
+    gpio_set_dir(RIGHT_WHEEL_ENCODER_PIN, GPIO_IN);
+    gpio_pull_up(RIGHT_WHEEL_ENCODER_PIN);
 }
 
-// Polling loop for left encoder
-void poll_encoder() {
-    static uint32_t prev_state = 0; // Store the previous state of the pin
+// Generalized polling function for an encoder
+void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
+    static uint32_t last_edge_time[2] = {0};  // Separate debounce time for each encoder
+    static uint32_t prev_state[2] = {0};     // Store previous state for each encoder
+
     uint32_t current_time = to_us_since_boot(get_absolute_time());
-    uint32_t current_state = gpio_get(LEFT_WHEEL_ENCODER_PIN); // Read current state of the encoder pin
+    uint32_t current_state = gpio_get(gpio_pin);  // Read the GPIO state
+
+    // Determine index based on the GPIO pin
+    int index = (gpio_pin == LEFT_WHEEL_ENCODER_PIN) ? 0 : 1;
 
     // Detect edge changes (rising or falling)
-    if (current_state != prev_state) {
+    if (current_state != prev_state[index]) {
+        uint32_t time_since_last_edge = current_time - last_edge_time[index];
+
+        // Ignore edges occurring within debounce threshold
+        if (time_since_last_edge < DEBOUNCE_THRESHOLD) {
+            prev_state[index] = current_state;  // Update the state, but ignore the edge
+            return;
+        }
+
         if (current_state == 1) {  // Rising edge detected
-            last_rising_time = current_time;
+            encoder->last_rising_time = current_time;
         } else {  // Falling edge detected
-            last_falling_time = current_time;
-            notch_count++; // Increment notch count
-            pulse_width = last_falling_time - last_rising_time;
+            encoder->last_falling_time = current_time;
+            encoder->pulse_width = encoder->last_falling_time - encoder->last_rising_time;
 
-            if (pulse_width > MIN_PULSE_WIDTH) {
-                // Calculate speed and update moving average
-                float pulse_width_sec = pulse_width / MICROSECONDS_IN_A_SECOND;
-                float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
+            if (encoder->pulse_width > MIN_PULSE_WIDTH) {
+                float pulse_width_sec = encoder->pulse_width / MICROSECONDS_IN_A_SECOND;
 
-                speed_buffer[buffer_index] = speed;
-                buffer_index = (buffer_index + 1) % AVERAGE_FILTER_SIZE;
+                // Only calculate speed if pulse_width_sec > 0
+                if (pulse_width_sec > 0) {
+                    encoder->notch_count++;  // Increment notch count
 
-                float average_speed = calculate_moving_average(speed_buffer, AVERAGE_FILTER_SIZE);
-                float total_distance = notch_count * DISTANCE_PER_NOTCH;
+                    // Calculate speed and update moving average
+                    float speed = DISTANCE_PER_NOTCH / pulse_width_sec;
 
-                // Print speed and distance
-                //printf("Left Speed: %.2f m/s, Distance: %.2f m\n", average_speed, total_distance);
-                char message[50];
-                sprintf(message, "Left Speed: %.2f m/s, Distance: %.2f m\n", average_speed, total_distance);
-                xMessageBufferSend(wifiMessageBuffer, message, strlen(message), portMAX_DELAY);
+                    encoder->speed_buffer[encoder->buffer_index] = speed;
+                    encoder->buffer_index = (encoder->buffer_index + 1) % AVERAGE_FILTER_SIZE;
+
+                    float average_speed = calculate_moving_average(encoder->speed_buffer, AVERAGE_FILTER_SIZE);
+                    float total_distance = encoder->notch_count * DISTANCE_PER_NOTCH;
+
+                    // Update global variables
+                    if (gpio_pin == LEFT_WHEEL_ENCODER_PIN) {
+                        left_average_speed = average_speed;
+                        left_total_distance = total_distance;
+                    } else if (gpio_pin == RIGHT_WHEEL_ENCODER_PIN) {
+                        right_average_speed = average_speed;
+                        right_total_distance = total_distance;
+                    }
+
+                    // Send the message to Wi-Fi
+                    char combined_message[128];
+                    sprintf(combined_message, "Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                            left_average_speed, left_total_distance,
+                            right_average_speed, right_total_distance);
+                    xMessageBufferSend(wifiMessageBuffer, combined_message, strlen(combined_message), portMAX_DELAY);
+                }
             }
         }
-        prev_state = current_state; // Update previous state
+
+        last_edge_time[index] = current_time;  // Update the last valid edge time
+        prev_state[index] = current_state;    // Update the previous state
     }
 }

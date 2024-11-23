@@ -24,8 +24,8 @@ int main() {
     wifiReceiveBuffer = xMessageBufferCreate(256);
     wifiMessageBuffer = xMessageBufferCreate(256);
     
-    // Initialize Kalman filter state 
-    kalman_state *kalman = kalman_init(0.1, 1.0, 1.0, 50);  // You can adjust parameters as needed 
+    // Initialize Kalman filter state q,r,p,x
+    kalman_state *kalman = kalman_init(0.5, 2.0, 1.0, 50);  // You can adjust parameters as needed 
  
     // Create tasks for ultrasonic and logging 
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 1, &ultrasonicTaskHandle); 

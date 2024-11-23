@@ -59,16 +59,19 @@ void ultrasonic_task(void *pvParameters) {
         gpio_put(TRIGPIN, 1);
         sleep_us(10);
         gpio_put(TRIGPIN, 0);
-        poll_encoder();
+        poll_encoder(&left_encoder, LEFT_WHEEL_ENCODER_PIN);  // Poll the left encoder
+        poll_encoder(&right_encoder, RIGHT_WHEEL_ENCODER_PIN); // Poll the right encoder
+
         // Calculate the distance
         measured = pulse_width / 29.0 / 2.0;
         kalman_update(state, measured);
 
         message.distance = state->x;
-        message.obstacleDetected = (state->x < 15);
+        message.obstacleDetected = (state->x < 10);
 
         if (message.obstacleDetected) {
             printf("Obstacle detected: %.2f cm\n", message.distance);
+            
             stop_motors();
         } else {
             // Check for commands in a non-blocking manner
