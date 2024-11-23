@@ -1,6 +1,6 @@
 # Add executable for your project
 add_executable(irsensor_app
-    irsensor.c
+    function.c
 )
 
 # Include FreeRTOS and necessary libraries
@@ -9,6 +9,7 @@ target_include_directories(irsensor_app PRIVATE
     ${PICO_SDK_PATH}/lib/FreeRTOS/include            # FreeRTOS core headers
     ${PICO_SDK_PATH}/lib/FreeRTOS/portable/GCC/ARM_CM0   # FreeRTOS port headers
     ${CMAKE_SOURCE_DIR}/wifi
+    ${CMAKE_SOURCE_DIR}/motor
 )
 
 target_compile_definitions(irsensor_app PRIVATE
@@ -22,6 +23,7 @@ target_compile_definitions(irsensor_app PRIVATE
 target_link_libraries(irsensor_app
     pico_stdlib
     hardware_adc
+    hardware_pwm 
     FreeRTOS-Kernel-Heap4  # FreeRTOS kernel and dynamic heap
     wifi_lib
 )
@@ -35,7 +37,7 @@ pico_add_extra_outputs(irsensor_app)
 
 # Add executable for your project
 add_library(irsensor_lib
-    irsensor.c
+    function.c
 )
 
 # Include FreeRTOS and necessary libraries
@@ -44,6 +46,7 @@ target_include_directories(irsensor_lib PRIVATE
     ${PICO_SDK_PATH}/lib/FreeRTOS/include            # FreeRTOS core headers
     ${PICO_SDK_PATH}/lib/FreeRTOS/portable/GCC/ARM_CM0   # FreeRTOS port headers
     ${CMAKE_SOURCE_DIR}/wifi
+    ${CMAKE_SOURCE_DIR}/motor
 )
 
 # Link necessary libraries
@@ -52,6 +55,7 @@ target_link_libraries(irsensor_lib
     hardware_adc
     FreeRTOS-Kernel-Heap4  # FreeRTOS kernel and dynamic heap
     wifi_lib
+    hardware_pwm 
 )
 
 target_compile_definitions(irsensor_lib PRIVATE
