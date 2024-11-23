@@ -5,7 +5,7 @@
 #define OUT_X_L_A 0x28
 #define ACCEL_CONVERSION 0.00059841 // Convert to m/s² for ±2g
 #define FILTER_SAMPLES 5            // Reduced samples for faster response
-#define STATIONARY_THRESHOLD 0.05    // Threshold to detect stationary state
+#define STATIONARY_THRESHOLD 0.15    // Threshold to detect stationary state
 
 // Circular buffers for moving average filter
 float accel_x_buffer[FILTER_SAMPLES] = {0};
