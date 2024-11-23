@@ -57,7 +57,7 @@ void ultrasonic_task(void *pvParameters) {
     float setpoint = 0.0;
     float left_average_speed = 0.0;
     float right_average_speed = 0.0;
-    //init_encoder_gpio();
+    init_encoder_gpio();
     setupUltrasonicPins();
     init_motor_pins();
     setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
@@ -68,8 +68,8 @@ void ultrasonic_task(void *pvParameters) {
         gpio_put(TRIGPIN, 1);
         sleep_us(10);
         gpio_put(TRIGPIN, 0);
-        //poll_encoder(&left_encoder, LEFT_WHEEL_ENCODER_PIN);  // Poll the left encoder
-        //poll_encoder(&right_encoder, RIGHT_WHEEL_ENCODER_PIN); // Poll the right encoder
+        poll_encoder(&left_encoder, LEFT_WHEEL_ENCODER_PIN);  // Poll the left encoder
+        poll_encoder(&right_encoder, RIGHT_WHEEL_ENCODER_PIN); // Poll the right encoder
 
         // Calculate the distance
         measured = pulse_width / 29.0 / 2.0;
@@ -81,7 +81,7 @@ void ultrasonic_task(void *pvParameters) {
 
         if (message.obstacleDetected && obstacleFlag == false) {
             stop_motors();
-            xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
+            //xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
             obstacleFlag = true;
             // Format the Wi-Fi message
             snprintf(wifi_message, sizeof(wifi_message), 
@@ -108,17 +108,17 @@ void ultrasonic_task(void *pvParameters) {
                             break;
                     }
                     switch(speed){
-                        case '4':
-                            set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
+                        case '5':
+                            set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            //xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
                             break;
                         case '7':
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
+                            //xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
                             break;
                         case '0':
                             set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
+                            //xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
                             break;
                         default:
                             break;
@@ -138,7 +138,7 @@ void ultrasonic_task(void *pvParameters) {
 
                 // Check if the command is "stop"
                 if (stopCheck == 's') {
-                    xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
+                    //xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
                     stop_motors();
                     printf("STOP\n");
                 } else {
@@ -167,24 +167,24 @@ void ultrasonic_task(void *pvParameters) {
 
                     // Use switch-case to set the speed
                     switch (speed) {
-                        case '4':  // Set speed to 40%
-                            set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                        case '5':  // Set speed to 50%
+                            set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-                            xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
+                            //xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
 
-                            printf("SPEED 40\n");
+                            printf("SPEED 50\n");
                             break;
                         case '7':  // Set speed to 70%
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-                            xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
+                            //xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
 
                             printf("SPEED 70\n");
                             break;
                         case '0':  // Set speed to 100%
                             set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                             
-                            xMessageBufferSend(motorMessageBuffer, "1.0", 3, portMAX_DELAY);
+                           //xMessageBufferSend(motorMessageBuffer, "1.0", 3, portMAX_DELAY);
 
                             printf("SPEED 100\n");
                             break;

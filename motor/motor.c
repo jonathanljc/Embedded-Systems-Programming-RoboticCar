@@ -55,9 +55,9 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left) {
     pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), is_left ? PWM_CHAN_A : PWM_CHAN_B, duty_cycle);
 }
 
-void set_speed40(uint32_t gpioLeft, uint32_t gpioRight) {
-    set_motor_speed(gpioLeft, 0.4, true);
-    set_motor_speed(gpioRight, 0.4, false);
+void set_speed50(uint32_t gpioLeft, uint32_t gpioRight) {
+    set_motor_speed(gpioLeft, 0.5, true);
+    set_motor_speed(gpioRight, 0.5, false);
 }
 
 void set_speed70(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -67,7 +67,7 @@ void set_speed70(uint32_t gpioLeft, uint32_t gpioRight) {
 
 
 void set_speed100(uint32_t gpioLeft, uint32_t gpioRight) {
-    set_motor_speed(gpioLeft, 1.0 - 0.08, true);
+    set_motor_speed(gpioLeft, 1.0, true);
     set_motor_speed(gpioRight, 1.0, false);
 }
 

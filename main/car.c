@@ -36,7 +36,7 @@ int main() {
     xTaskCreate(main_task, "Wifi Task", 256, "car", 3, NULL);
 
     // Create a task for motor control
-    xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 1, NULL);
+    //xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 1, NULL);
  
     // Start the FreeRTOS scheduler 
     vTaskStartScheduler(); 
