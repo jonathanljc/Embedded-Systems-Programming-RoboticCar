@@ -7,6 +7,7 @@
 volatile absolute_time_t start_time;
 volatile uint64_t pulse_width;
 volatile bool obstacleDetected;
+volatile bool obstacleFlag = false;
 
 
 // Initialize the Kalman filter state
@@ -49,6 +50,7 @@ void ultrasonic_task(void *pvParameters) {
     double measured;
     DistanceMessage message;
     char command[100];
+    char wifi_message[100];  // Buffer for Wi-Fi message
     init_encoder_gpio();
     setupUltrasonicPins();
     init_motor_pins();
@@ -68,12 +70,22 @@ void ultrasonic_task(void *pvParameters) {
 
         message.distance = state->x;
         message.obstacleDetected = (state->x < 10);
+        
 
         if (message.obstacleDetected) {
-            printf("Obstacle detected: %.2f cm\n", message.distance);
-            
+            if(obstacleFlag == false){
+                obstacleFlag = true;
+                // Format the Wi-Fi message
+                snprintf(wifi_message, sizeof(wifi_message), 
+                        "Obstacle detected at %.2f cm. Motors stopping.\n", 
+                        message.distance);
+                // Send the message to the Wi-Fi buffer
+                xMessageBufferSend(wifiMessageBuffer, wifi_message, strlen(wifi_message), portMAX_DELAY);
+            }
+
             stop_motors();
         } else {
+            obstacleFlag = false;
             // Check for commands in a non-blocking manner
             if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), 0) > 0) {
                 printf("ULTRASONIC Received: %s\n", command);

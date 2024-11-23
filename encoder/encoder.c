@@ -33,6 +33,7 @@ void init_encoder_gpio() {
 }
 
 // Generalized polling function for an encoder
+// Generalized polling function for an encoder
 void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
     static uint32_t last_edge_time[2] = {0};  // Separate debounce time for each encoder
     static uint32_t prev_state[2] = {0};     // Store previous state for each encoder
@@ -42,6 +43,35 @@ void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
 
     // Determine index based on the GPIO pin
     int index = (gpio_pin == LEFT_WHEEL_ENCODER_PIN) ? 0 : 1;
+
+    // Check for inactivity timeout
+    if (current_time - last_edge_time[index] > ENCODER_INACTIVITY_TIMEOUT) {
+        // Reset encoder readings
+        encoder->notch_count = 0;
+        memset(encoder->speed_buffer, 0, sizeof(encoder->speed_buffer));
+        encoder->buffer_index = 0;
+
+        // Update global variables
+        if (gpio_pin == LEFT_WHEEL_ENCODER_PIN) {
+            left_average_speed = 0.0;
+            left_total_distance = 0.0;
+        } else if (gpio_pin == RIGHT_WHEEL_ENCODER_PIN) {
+            right_average_speed = 0.0;
+            right_total_distance = 0.0;
+        }
+
+        // Send reset message to Wi-Fi
+        char reset_message[128];
+        sprintf(reset_message, "Left: 0.00 m/s, %.2f m | Right: 0.00 m/s, %.2f m\n",
+                left_total_distance, right_total_distance);
+        xMessageBufferSend(wifiMessageBuffer, reset_message, strlen(reset_message), portMAX_DELAY);
+        left_average_speed = 0.0;
+        right_average_speed = 0.0;
+
+        // Update last edge time to prevent repetitive resets
+        last_edge_time[index] = current_time;
+        return; // Skip further processing for this cycle
+    }
 
     // Detect edge changes (rising or falling)
     if (current_state != prev_state[index]) {

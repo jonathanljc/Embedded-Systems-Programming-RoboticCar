@@ -19,6 +19,7 @@
 #define MIN_PULSE_WIDTH 500  // Ignore noise below 500 µs
 #define DEBOUNCE_THRESHOLD 500  // Debounce threshold in microseconds
 #define AVERAGE_FILTER_SIZE 20  // Moving average buffer size
+#define ENCODER_INACTIVITY_TIMEOUT 1000000 // 5 seconds in microseconds
 
 // Structure to hold encoder state
 typedef struct {
