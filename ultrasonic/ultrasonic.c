@@ -51,18 +51,25 @@ void ultrasonic_task(void *pvParameters) {
     DistanceMessage message;
     char command[100];
     char wifi_message[100];  // Buffer for Wi-Fi message
-    init_encoder_gpio();
+    absolute_time_t previous_time = get_absolute_time();
+    absolute_time_t current_time;
+    float dt = 0.0;
+    float setpoint = 0.0;
+    float left_average_speed = 0.0;
+    float right_average_speed = 0.0;
+    //init_encoder_gpio();
     setupUltrasonicPins();
     init_motor_pins();
     setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+    init_pid();
 
     while (true) {
         // Trigger the ultrasonic sensor
         gpio_put(TRIGPIN, 1);
         sleep_us(10);
         gpio_put(TRIGPIN, 0);
-        poll_encoder(&left_encoder, LEFT_WHEEL_ENCODER_PIN);  // Poll the left encoder
-        poll_encoder(&right_encoder, RIGHT_WHEEL_ENCODER_PIN); // Poll the right encoder
+        //poll_encoder(&left_encoder, LEFT_WHEEL_ENCODER_PIN);  // Poll the left encoder
+        //poll_encoder(&right_encoder, RIGHT_WHEEL_ENCODER_PIN); // Poll the right encoder
 
         // Calculate the distance
         measured = pulse_width / 29.0 / 2.0;
@@ -70,7 +77,6 @@ void ultrasonic_task(void *pvParameters) {
 
         message.distance = state->x;
         message.obstacleDetected = (state->x < 10);
-        
 
         if (message.obstacleDetected) {
             if(obstacleFlag == false){
@@ -82,7 +88,7 @@ void ultrasonic_task(void *pvParameters) {
                 // Send the message to the Wi-Fi buffer
                 xMessageBufferSend(wifiMessageBuffer, wifi_message, strlen(wifi_message), portMAX_DELAY);
             }
-
+            xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
             stop_motors();
         } else {
             obstacleFlag = false;
@@ -97,6 +103,7 @@ void ultrasonic_task(void *pvParameters) {
 
                 // Check if the command is "stop"
                 if (stopCheck == 's') {
+                    xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
                     stop_motors();
                     printf("STOP\n");
                 } else {
@@ -127,14 +134,21 @@ void ultrasonic_task(void *pvParameters) {
                     switch (speed) {
                         case '4':  // Set speed to 40%
                             set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+
+                            xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
+
                             printf("SPEED 40\n");
                             break;
                         case '7':  // Set speed to 70%
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+
+                            xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
+
                             printf("SPEED 70\n");
                             break;
                         case '0':  // Set speed to 100%
                             set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+
                             printf("SPEED 100\n");
                             break;
                         default:

@@ -11,6 +11,7 @@
 // Define the task handle for ultrasonic task 
 TaskHandle_t ultrasonicTaskHandle = NULL; 
 TaskHandle_t wifiTaskHandle = NULL;
+TaskHandle_t motorControlTaskHandle = NULL;
 
 // Message buffer for wifi receive
 MessageBufferHandle_t wifiMessageBuffer;
@@ -23,15 +24,19 @@ int main() {
  
     wifiReceiveBuffer = xMessageBufferCreate(256);
     wifiMessageBuffer = xMessageBufferCreate(256);
+    motorMessageBuffer = xMessageBufferCreate(256);
     
     // Initialize Kalman filter state q,r,p,x
     kalman_state *kalman = kalman_init(0.5, 2.0, 1.0, 50);  // You can adjust parameters as needed 
  
     // Create tasks for ultrasonic and logging 
-    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 1, &ultrasonicTaskHandle); 
+    xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 2, NULL); 
 
     // Create a task for wifi
-    xTaskCreate(main_task, "Wifi Task", 256, "car", 1, &wifiTaskHandle);
+    xTaskCreate(main_task, "Wifi Task", 256, "car", 3, NULL);
+
+    // Create a task for motor control
+    xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 1, NULL);
  
     // Start the FreeRTOS scheduler 
     vTaskStartScheduler(); 

@@ -31,7 +31,10 @@ void set_speed70(uint32_t gpioLeft, uint32_t gpioRight);
 void set_speed100(uint32_t gpioLeft, uint32_t gpioRight);
 void set_left_motor_speed(uint32_t gpio, float speed);
 void set_right_motor_speed(uint32_t gpio, float speed);
-void motor_init_buffers(); // Initialize motor control message buffer
+void adjust_motor_speed(float left_speed, float right_speed, float setpoint, float dt);
+void init_pid();
+void motor_init_buffers();
+void motor_control_task(void *pvParameters);
 // void week10task1(void *pvParameters);
 
 #endif

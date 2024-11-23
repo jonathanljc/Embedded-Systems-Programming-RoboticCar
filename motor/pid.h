@@ -12,6 +12,6 @@
     } PIDController;
 
     void pid_init(PIDController *pid, float kp, float ki, float kd);
-    float pid_compute(PIDController *pid, float setpoint, float measured_value);
+    float pid_compute(PIDController *pid, float setpoint, float measured_value, float dt);
 
     #endif // PID_CONTROLLER_H

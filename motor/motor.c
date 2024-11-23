@@ -8,9 +8,14 @@
 #include "task.h"
 #include "message_buffer.h"
 #include "ultrasonic.h"
+#include <string.h>
 
 // Define and initialize the message buffer
 MessageBufferHandle_t motorMessageBuffer;
+
+// Define the PID controllers for the left and right motors
+PIDController left_pid_controller;
+PIDController right_pid_controller;
 
 
 // Function to set up the PWM
@@ -120,6 +125,18 @@ void set_right_motor_speed(uint32_t gpio, float speed) {
     pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), PWM_CHAN_A, duty_cycle);
 }
 
+void init_pid(){
+    pid_init(&left_pid_controller, 1.0, 0.1, 0.1);
+    pid_init(&right_pid_controller, 1.0, 0.1, 0.1);
+}
+
+void adjust_motor_speed(float left_speed, float right_speed,float setpoint, float dt) {
+    float left_pid = pid_compute(&left_pid_controller, setpoint, left_speed, dt);
+    float right_pid = pid_compute(&right_pid_controller, setpoint, right_speed, dt);
+    printf("Left PID: %.2f, Right PID: %.2f\n", left_pid, right_pid);
+    set_left_motor_speed(L_MOTOR_PWM_PIN, left_pid);
+    set_right_motor_speed(R_MOTOR_PWM_PIN, right_pid);
+}
 
 void motor_init_buffers() {
     motorMessageBuffer = xMessageBufferCreate(256);
@@ -129,7 +146,43 @@ void motor_init_buffers() {
     }
 }
 
+void motor_control_task(void *pvParameters) {
+    absolute_time_t previous_time = get_absolute_time();
+    absolute_time_t current_time;
+    float dt = 0.0;
+    float setpoint = 0.0;
+    float left_average_speed = 0.0;
+    float left_percentage_speed = 0.0;
+    float right_average_speed = 0.0;
+    float right_percentage_speed = 0.0;
+    char speed[100];
 
+    init_encoder_gpio();
+    init_pid();
+    init_motor_pins();
+    setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+    motor_init_buffers();
 
+    while (true) {
+        // Poll the encoders
+        poll_encoder(&left_encoder, LEFT_WHEEL_ENCODER_PIN);  // Poll the left encoder
+        poll_encoder(&right_encoder, RIGHT_WHEEL_ENCODER_PIN);
 
+        if (xMessageBufferReceive(motorMessageBuffer, &speed, sizeof(speed), 0) > 0) {
+            setpoint = atof(speed);
+        }
+
+        current_time = get_absolute_time();
+        dt = absolute_time_diff_us(previous_time, current_time) / 1000000;  // in seconds
+        previous_time = current_time;
+
+        left_percentage_speed = left_average_speed / MAX_SPEED;
+        right_percentage_speed = right_average_speed / MAX_SPEED;
+
+        adjust_motor_speed(left_percentage_speed, right_percentage_speed, setpoint, dt);
+
+        // Delay for a short time to avoid busy-waiting
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Adjust the delay as necessary
+    }
+}
     
