@@ -65,8 +65,7 @@ void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
         sprintf(reset_message, "Left: 0.00 m/s, %.2f m | Right: 0.00 m/s, %.2f m\n",
                 left_total_distance, right_total_distance);
         xMessageBufferSend(wifiMessageBuffer, reset_message, strlen(reset_message), portMAX_DELAY);
-        left_average_speed = 0.0;
-        right_average_speed = 0.0;
+        
 
         // Update last edge time to prevent repetitive resets
         last_edge_time[index] = current_time;
