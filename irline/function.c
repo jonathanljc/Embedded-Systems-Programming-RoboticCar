@@ -569,7 +569,7 @@ void unified_task(void *pvParameters) {
         }
 
         // Task periodicity
-        vTaskDelay(pdMS_TO_TICKS(1)); // Delay of 1 ms
+        vTaskDelay(pdMS_TO_TICKS(10)); // Delay of 1 ms
     }
 }
 

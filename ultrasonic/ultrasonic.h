@@ -21,6 +21,7 @@ extern volatile bool obstacleDetected;
 extern MessageBufferHandle_t motorMessageBuffer;  // Message buffer for motor control
 extern MessageBufferHandle_t wifiReceiveBuffer;   // Message buffer for wifi receive
 extern MessageBufferHandle_t wifiMessageBuffer;   // Message buffer for wifi send
+extern bool disconnectRemote;
 
 // Structure to hold the distance and obstacle status
 typedef struct

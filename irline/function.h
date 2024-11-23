@@ -28,6 +28,7 @@ extern const char code39_chars[];
 
 extern bool initial_black_detected;
 extern bool initial_blackline_detected;
+extern bool disconnectRemote;
 
 
 
@@ -55,7 +56,7 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left);
 // Straight Line Task
 //void straight_line_task(void *pvParameters);
 // Unified Task
-//void unified_task(void *pvParameters);
+void unified_task(void *pvParameters);
 void unified_function();
 void blackline_function();
 

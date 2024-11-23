@@ -125,7 +125,7 @@ void ultrasonic_task(void *pvParameters) {
                     }
                 }
             }
-        } else {
+        } else if(disconnectRemote == false){
             obstacleFlag = false;
             // Check for commands in a non-blocking manner
             if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), 0) > 0) {

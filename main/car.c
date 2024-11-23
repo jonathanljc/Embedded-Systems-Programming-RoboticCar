@@ -16,6 +16,8 @@ TaskHandle_t wifiTaskHandle = NULL;
 // Message buffer for wifi receive
 MessageBufferHandle_t wifiMessageBuffer;
 MessageBufferHandle_t wifiReceiveBuffer;
+
+bool disconnectRemote = false;
  
 int main() { 
     // Initialize standard I/O for serial output 

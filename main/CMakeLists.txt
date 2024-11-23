@@ -39,6 +39,7 @@ target_include_directories(car PRIVATE
         ${CMAKE_SOURCE_DIR}/motor           # Include motor directory
         ${CMAKE_SOURCE_DIR}/irline          # Include irline directory
         ${CMAKE_SOURCE_DIR}/wifi            # Include wifi directory if required by irsensor_lib
+        ${CMAKE_SOURCE_DIR}/irline        # Include irline directory
 )
 
 target_compile_definitions(car PRIVATE
