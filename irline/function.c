@@ -530,7 +530,7 @@ void unified_task(void *pvParameters) {
     adc_gpio_init(LINE_SENSOR_PIN);
 
     // Select initial ADC input
-    adc_select_input(0); // Ensure correct initial channel
+    adc_select_input(1); // Ensure correct initial channel
 
     // Variables
     uint16_t line_adc_value = 0;
@@ -539,7 +539,7 @@ void unified_task(void *pvParameters) {
     // Wait until black surface is detected
     printf("Waiting for black surface to start...\n");
     do {
-        adc_select_input(0); // Read from line sensor (GPIO 27)
+        adc_select_input(1); // Read from line sensor (GPIO 27)
         line_adc_value = adc_read();
         line_black_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
 
@@ -552,7 +552,7 @@ void unified_task(void *pvParameters) {
 
     while (1) {
         // **Line Sensor Logic** (Motor Control)
-        adc_select_input(0); // Switch to line sensor (GPIO 27)
+        adc_select_input(1); // Switch to line sensor (GPIO 27)
         line_adc_value = adc_read();
         line_black_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
 
