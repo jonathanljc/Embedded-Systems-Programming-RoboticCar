@@ -524,7 +524,7 @@ void blackline_function() {
 }
 */
 
-void unified_function(void *pvParameters) {
+void unified_task(void *pvParameters) {
     // Initialize ADC for line sensor
     adc_init();
     adc_gpio_init(LINE_SENSOR_PIN);
@@ -535,6 +535,20 @@ void unified_function(void *pvParameters) {
     // Variables
     uint16_t line_adc_value = 0;
     bool line_black_detected = false;
+
+    // Wait until black surface is detected
+    printf("Waiting for black surface to start...\n");
+    do {
+        adc_select_input(0); // Read from line sensor (GPIO 27)
+        line_adc_value = adc_read();
+        line_black_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
+
+        if (!line_black_detected) {
+            vTaskDelay(pdMS_TO_TICKS(10)); // Check every 10 ms
+        }
+    } while (!line_black_detected);
+
+    printf("Black surface detected! Starting task...\n");
 
     while (1) {
         // **Line Sensor Logic** (Motor Control)
@@ -558,6 +572,7 @@ void unified_function(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(1)); // Delay of 1 ms
     }
 }
+
 
 
 
