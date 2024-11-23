@@ -90,14 +90,12 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
     float speed = sqrt(accel_data->x * accel_data->x + accel_data->y * accel_data->y) / 9.81; // Normalize to g-force
     speed = fmin(speed, 1.0) * 100; // Cap speed to 100%
 
-    // Map speed to thresholds: 0%, 40%, 70%, or 100%
+    // Map speed to thresholds: 0%, 50%, or 100%
     int mapped_speed;
-    if (speed <= 20)
+    if (speed <= 30)
         mapped_speed = 0;
-    else if (speed <= 55)
-        mapped_speed = 40;
-    else if (speed <= 85)
-        mapped_speed = 70;
+    else if (speed <= 75)
+        mapped_speed = 50;
     else
         mapped_speed = 100;
 
