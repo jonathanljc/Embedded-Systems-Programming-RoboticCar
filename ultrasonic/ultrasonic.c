@@ -76,7 +76,8 @@ void ultrasonic_task(void *pvParameters) {
         kalman_update(state, measured);
 
         message.distance = state->x;
-        message.obstacleDetected = (state->x < 10);
+        message.obstacleDetected = (state->x < 15);
+        
 
         if (message.obstacleDetected) {
             if(obstacleFlag == false){
@@ -85,8 +86,11 @@ void ultrasonic_task(void *pvParameters) {
                 snprintf(wifi_message, sizeof(wifi_message), 
                         "Obstacle detected at %.2f cm. Motors stopping.\n", 
                         message.distance);
+                // snprintf(wifi_message, sizeof(wifi_message), 
+                //         "Obstacle detected at %.2f cm. Motors stopping.\n", 
+                //         message.distance);
                 // Send the message to the Wi-Fi buffer
-                xMessageBufferSend(wifiMessageBuffer, wifi_message, strlen(wifi_message), portMAX_DELAY);
+                xMessageBufferSend(wifiMessageBuffer, wifi_message, strlen(wifi_message) + 1, portMAX_DELAY);
             }
             xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
             stop_motors();
@@ -148,6 +152,8 @@ void ultrasonic_task(void *pvParameters) {
                             break;
                         case '0':  // Set speed to 100%
                             set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            
+                            xMessageBufferSend(motorMessageBuffer, "1.0", 3, portMAX_DELAY);
 
                             printf("SPEED 100\n");
                             break;

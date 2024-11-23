@@ -270,7 +270,7 @@ void main_task(void *pvParameters)
 
             if (strcmp(topic, "remote") == 0 || strcmp(topic, "car") == 0)
             {
-                char command[50];
+                char command[100];
                 if (xMessageBufferReceive(wifiMessageBuffer, &command, sizeof(command), portMAX_DELAY) > 0)
                 {
                     publish_to_topic(topic, command);

@@ -61,10 +61,12 @@ void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
         }
 
         // Send reset message to Wi-Fi
-        char reset_message[128];
-        sprintf(reset_message, "Left: 0.00 m/s, %.2f m | Right: 0.00 m/s, %.2f m\n",
+        char reset_message[100];
+        snprintf(reset_message, 100, "Left: 0.00 m/s, %.2f m | Right: 0.00 m/s, %.2f m\n",
                 left_total_distance, right_total_distance);
-        xMessageBufferSend(wifiMessageBuffer, reset_message, strlen(reset_message), portMAX_DELAY);
+        // sprintf(reset_message, "Left: 0.00 m/s, %.2f m | Right: 0.00 m/s, %.2f m\n",
+        //         left_total_distance, right_total_distance);
+        xMessageBufferSend(wifiMessageBuffer, reset_message, strlen(reset_message) + 1, portMAX_DELAY);
         
 
         // Update last edge time to prevent repetitive resets
@@ -114,11 +116,14 @@ void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
                     }
 
                     // Send the message to Wi-Fi
-                    char combined_message[128];
-                    sprintf(combined_message, "Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                    char combined_message[100];
+                    snprintf(combined_message, 100, "Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
-                    xMessageBufferSend(wifiMessageBuffer, combined_message, strlen(combined_message), portMAX_DELAY);
+                    // sprintf(combined_message, "Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                    //         left_average_speed, left_total_distance,
+                    //         right_average_speed, right_total_distance);
+                    xMessageBufferSend(wifiMessageBuffer, combined_message, strlen(combined_message) + 1, portMAX_DELAY);
                 }
             }
         }

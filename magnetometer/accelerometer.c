@@ -5,7 +5,7 @@
 #define OUT_X_L_A 0x28
 #define ACCEL_CONVERSION 0.00059841 // Convert to m/s² for ±2g
 #define FILTER_SAMPLES 5            // Reduced samples for faster response
-#define STATIONARY_THRESHOLD 0.05    // Threshold to detect stationary state
+#define STATIONARY_THRESHOLD 0.15    // Threshold to detect stationary state
 
 // Circular buffers for moving average filter
 float accel_x_buffer[FILTER_SAMPLES] = {0};
@@ -82,7 +82,7 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
         fabs(accel_data->y) < STATIONARY_THRESHOLD &&
         fabs(accel_data->z) < STATIONARY_THRESHOLD)
     {
-        snprintf(command_buffer, 50, "stop");
+        snprintf(command_buffer, 100, "stop");
         return;
     }
 
@@ -103,18 +103,18 @@ void generate_control_command(const AccelerometerData *accel_data, char *command
 
     // If mapped speed is 0%, set command to "stop"
     if (mapped_speed == 0) {
-        snprintf(command_buffer, 50, "stop");
+        snprintf(command_buffer, 100, "stop");
         return;
     }
 
     // Determine control command based on direction and mapped speed
     if (fabs(accel_data->y) > fabs(accel_data->x))
     {
-        snprintf(command_buffer, 50, "turn %s at %d%%", accel_data->y > 0 ? "left" : "right", mapped_speed);
+        snprintf(command_buffer, 100, "turn %s at %d%%", accel_data->y > 0 ? "left" : "right", mapped_speed);
     }
     else
     {
-        snprintf(command_buffer, 50, "move %s at %d%%", accel_data->x > 0 ? "forward" : "backward", mapped_speed);
+        snprintf(command_buffer, 100, "move %s at %d%%", accel_data->x > 0 ? "forward" : "backward", mapped_speed);
     }
 }
 
@@ -124,8 +124,8 @@ void magnetometer_task(__unused void *params)
     vTaskDelay(pdMS_TO_TICKS(5000)); // Shorter initial delay for faster start
     AccelerometerData accel_data;
     int16_t raw_ax, raw_ay, raw_az;
-    char command[50];
-    char last_command[50] = ""; // Store last command to avoid duplicates
+    char command[100];
+    char last_command[100] = ""; // Store last command to avoid duplicates
 
     // Initialize I2C and GY-511 sensor
     i2c_init(i2c1, 100 * 1000);
