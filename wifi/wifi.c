@@ -260,7 +260,7 @@ void main_task(void *pvParameters)
     {
         if (mqtt_client_is_connected(mqtt_state->mqtt_client))
         {
-            // cyw43_arch_lwip_begin();
+           // cyw43_arch_lwip_begin();
 
             if (!subscribed && (strcmp(topic, "dashboard") == 0 || strcmp(topic, "car") == 0))
             {
@@ -290,7 +290,7 @@ void main_task(void *pvParameters)
             //     counter++;
             //     vTaskDelay(pdMS_TO_TICKS(50));
             // }
-            // cyw43_arch_lwip_end();
+            //cyw43_arch_lwip_end();
         }
         else
         {
