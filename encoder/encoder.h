@@ -39,6 +39,9 @@ extern MessageBufferHandle_t wifiMessageBuffer;
 extern Encoder left_encoder;  // Left encoder state
 extern Encoder right_encoder; // Right encoder state
 
+extern char telemetryInstruction;
+extern char telemetrySpeed;
+
 // Function declarations
 float calculate_moving_average(float buffer[], int size);
 void init_encoder_gpio(void);

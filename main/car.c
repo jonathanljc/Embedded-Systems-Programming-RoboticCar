@@ -18,6 +18,8 @@ MessageBufferHandle_t wifiMessageBuffer;
 MessageBufferHandle_t wifiReceiveBuffer;
 
 bool disconnectRemote = false;
+char telemetryInstruction;
+char telemetrySpeed;
  
 int main() { 
     // Initialize standard I/O for serial output 

@@ -97,12 +97,15 @@ void ultrasonic_task(void *pvParameters) {
                     switch(instruction){
                         case 'b':
                             move_backward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            telemetryInstruction = 'b';
                             break;
                         case 'l':
                             rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            telemetryInstruction = 'l';
                             break;
                         case 'r':
                             rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            telemetryInstruction = 'r';
                             break;
                         default:
                             break;
@@ -111,14 +114,17 @@ void ultrasonic_task(void *pvParameters) {
                         case '5':
                             set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                             //xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
+                            telemetrySpeed = '5';
                             break;
                         case '7':
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                             //xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
+                            telemetrySpeed = '7';
                             break;
                         case '0':
                             set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                             //xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
+                            telemetrySpeed = '0';
                             break;
                         default:
                             break;
@@ -135,30 +141,31 @@ void ultrasonic_task(void *pvParameters) {
                 char stopCheck = command[0];
                 char instruction = command[5];
                 char speed = command[strlen(command) - 3];
+                char telemetryCommand[100];
 
                 // Check if the command is "stop"
                 if (stopCheck == 's') {
                     //xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
                     stop_motors();
-                    printf("STOP\n");
+                    telemetryInstruction = 's';
                 } else {
                     // Use switch-case to call the appropriate motor function
                     switch (instruction) {
                         case 'f':  // Move forward
                             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            printf("FORWARD\n");
+                            telemetryInstruction = 'f';
                             break;
                         case 'b':  // Move backward
                             move_backward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            printf("BACKWARD\n");
+                            telemetryInstruction = 'b';
                             break;
                         case 'l':  // Rotate left
                             rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            printf("LEFT\n");
+                            telemetryInstruction = 'l';
                             break;
                         case 'r':  // Rotate right
                             rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            printf("RIGHT\n");
+                            telemetryInstruction = 'r';
                             break;
                         default:
                             printf("Unknown instruction: %c\n", instruction);
@@ -172,21 +179,21 @@ void ultrasonic_task(void *pvParameters) {
 
                             //xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
 
-                            printf("SPEED 50\n");
+                            telemetrySpeed = '5';
                             break;
                         case '7':  // Set speed to 70%
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
                             //xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
 
-                            printf("SPEED 70\n");
+                            telemetrySpeed = '7';
                             break;
                         case '0':  // Set speed to 100%
                             set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                             
                            //xMessageBufferSend(motorMessageBuffer, "1.0", 3, portMAX_DELAY);
 
-                            printf("SPEED 100\n");
+                            telemetrySpeed = '0';
                             break;
                         default:
                             printf("Unknown speed: %c\n", speed);
@@ -194,6 +201,10 @@ void ultrasonic_task(void *pvParameters) {
                     }
                 }
             }
+        }else if(disconnectRemote == true){
+            // Enters here if the remote is disconnected
+            telemetryInstruction = 'a';
+            telemetrySpeed = 'a';
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // Adjust delay as needed

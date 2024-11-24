@@ -30,7 +30,7 @@ extern bool initial_black_detected;
 extern bool initial_blackline_detected;
 extern bool disconnectRemote;
 
-
+// extern MessageBufferHandle_t wifiMessageBuffer;
 
 // Motor Control
 void setup_pwm(uint32_t gpioLeft, uint32_t gpioRight);
