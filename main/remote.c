@@ -5,6 +5,8 @@
 MessageBufferHandle_t wifiMessageBuffer;
 MessageBufferHandle_t wifiReceiveBuffer;
 
+bool disconnectRemote = false;
+
 int main()
 {
     // Initialize standard I/O for debugging output

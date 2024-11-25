@@ -35,6 +35,8 @@
 extern MessageBufferHandle_t wifiMessageBuffer;
 extern MessageBufferHandle_t wifiReceiveBuffer;
 
+extern bool disconnectRemote;
+
 typedef struct {
     ip_addr_t remote_addr;
     mqtt_client_t *mqtt_client;
