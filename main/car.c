@@ -26,8 +26,8 @@ int main() {
     stdio_init_all(); 
     sleep_ms(2000); 
  
-    wifiReceiveBuffer = xMessageBufferCreate(128);
-    wifiMessageBuffer = xMessageBufferCreate(128);
+    wifiReceiveBuffer = xMessageBufferCreate(512);
+    wifiMessageBuffer = xMessageBufferCreate(512);
     
     // Initialize Kalman filter state q,r,p,x
     kalman_state *kalman = kalman_init(0.1, 1.0, 1.0, 50);  // You can adjust parameters as needed 
@@ -36,7 +36,7 @@ int main() {
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 2, &ultrasonicTaskHandle); 
 
     // Create a task for wifi
-    xTaskCreate(main_task, "Wifi Task", 256, "car", 3, &wifiTaskHandle);
+    xTaskCreate(main_task, "Wifi Task", 512, "car", 3, &wifiTaskHandle);
 
      // Create Unified Task
     xTaskCreate(unified_task, "Sensor Task", 1024, NULL, 1, NULL);

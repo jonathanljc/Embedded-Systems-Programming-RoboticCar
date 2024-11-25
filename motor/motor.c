@@ -55,9 +55,14 @@ void set_motor_speed(uint32_t gpio, float speed, bool is_left) {
     pwm_set_chan_level(pwm_gpio_to_slice_num(gpio), is_left ? PWM_CHAN_A : PWM_CHAN_B, duty_cycle);
 }
 
+void set_speed40(uint32_t gpioLeft, uint32_t gpioRight) {
+    set_motor_speed(gpioLeft, 0.4, true);
+    set_motor_speed(gpioRight, 0.4, false);
+}
+
 void set_speed50(uint32_t gpioLeft, uint32_t gpioRight) {
-    set_motor_speed(gpioLeft, 0.5, true);
-    set_motor_speed(gpioRight, 0.5, false);
+    set_motor_speed(gpioLeft, 0.6, true);
+    set_motor_speed(gpioRight, 0.6*0.95, false);
 }
 
 void set_speed70(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -76,7 +81,7 @@ void move_forward(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
-    printf("FORWARD DONE\n");
+    //printf("FORWARD DONE\n");
 }
 
 void move_backward(uint32_t gpioLeft, uint32_t gpioRight) {
@@ -84,7 +89,7 @@ void move_backward(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 1);
     gpio_put(R_MOTOR_DIR_PIN1, 0);
     gpio_put(R_MOTOR_DIR_PIN2, 1);
-    printf("BACKWARD DONE\n");
+    //printf("BACKWARD DONE\n");
 }
 
 void stop_motors() {
@@ -98,7 +103,7 @@ void rotate_left(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 1);
     gpio_put(R_MOTOR_DIR_PIN1, 1);
     gpio_put(R_MOTOR_DIR_PIN2, 0);
-    printf("LEFT DONE\n");
+    //printf("LEFT DONE\n");
 }
 
 // Rotate right function 
@@ -107,7 +112,7 @@ void rotate_right(uint32_t gpioLeft, uint32_t gpioRight) {
     gpio_put(L_MOTOR_DIR_PIN2, 0);
     gpio_put(R_MOTOR_DIR_PIN1, 0);
     gpio_put(R_MOTOR_DIR_PIN2, 1);
-    printf("RIGHT DONE\n");
+    //printf("RIGHT DONE\n");
 }
 void set_left_motor_speed(uint32_t gpio, float speed) {
     // Calculate the duty cycle

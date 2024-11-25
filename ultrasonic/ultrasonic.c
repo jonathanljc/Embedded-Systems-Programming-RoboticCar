@@ -135,7 +135,7 @@ void ultrasonic_task(void *pvParameters) {
             obstacleFlag = false;
             // Check for commands in a non-blocking manner
             if (xMessageBufferReceive(wifiReceiveBuffer, &command, sizeof(command), 0) > 0) {
-                printf("ULTRASONIC Received: %s\n", command);
+                //printf("ULTRASONIC Received: %s\n", command);
                 
                 // Parse the instruction and speed from the command
                 char stopCheck = command[0];

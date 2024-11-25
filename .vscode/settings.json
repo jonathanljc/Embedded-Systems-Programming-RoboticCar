@@ -37,6 +37,7 @@
     "encoder.h": "c",
     "ip4_addr.h": "c",
     "motor.h": "c",
-    "cstdint": "c"
+    "cstdint": "c",
+    "sockets.h": "c"
   }
 }

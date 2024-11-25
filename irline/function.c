@@ -725,6 +725,7 @@ void unified_task(void *pvParameters) {
     } while (!line_black_detected);
 
     printf("Black surface detected! Starting task...\n");
+    disconnectRemote = true;
 
     while (1) {
         // **Line Sensor Logic** (Motor Control)
@@ -736,16 +737,18 @@ void unified_task(void *pvParameters) {
             // Move forward on black
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            printf("The adc is ",line_adc_value);
         } else {
             // Stop motors on white
             set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
             set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
+            printf("The adc is ",line_adc_value);
 
             // Rotate left, then right if no black is detected
             while (!line_black_detected) {
                 rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                vTaskDelay(pdMS_TO_TICKS(200));
+                set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                vTaskDelay(pdMS_TO_TICKS(350));
 
                 adc_select_input(1); // Check for black again
                 line_adc_value = adc_read();
@@ -753,8 +756,8 @@ void unified_task(void *pvParameters) {
 
                 if (!line_black_detected) {
                     rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                    set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                    vTaskDelay(pdMS_TO_TICKS(200));
+                    set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                    vTaskDelay(pdMS_TO_TICKS(300));
 
                     adc_select_input(1); // Check again
                     line_adc_value = adc_read();
@@ -763,12 +766,13 @@ void unified_task(void *pvParameters) {
             }
 
             // Stop briefly when black is detected again
-            set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
-            set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
+            //set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
+            //set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
             vTaskDelay(pdMS_TO_TICKS(500));
         }
 
         // **Barcode Sensor Logic** (Character Detection)
+        
         adc_select_input(0); // Switch to barcode sensor (GPIO 26)
         barcode_adc_value = adc_read();
         current_color = (barcode_adc_value > THRESHOLD) ? "Black" : "White";
@@ -827,9 +831,9 @@ void unified_task(void *pvParameters) {
             }
         } else {
             last_white_time = 0;
-        }
+        } 
 
-        vTaskDelay(pdMS_TO_TICKS(1)); // Small delay for next ADC reading
+        vTaskDelay(pdMS_TO_TICKS(100)); // Small delay for next ADC reading
     }
 }
 
