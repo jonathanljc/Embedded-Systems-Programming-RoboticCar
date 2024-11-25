@@ -7,6 +7,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <stdint.h>
+#include "message_buffer.h"
 
 
 extern const char *code39_patterns[];
@@ -29,6 +30,8 @@ extern const char code39_chars[];
 extern bool once_detect_black;
 extern bool initial_blackline_detected;
 extern bool disconnectRemote;
+
+extern MessageBufferHandle_t wifiMessageBuffer;
 
 
 // Motor Control

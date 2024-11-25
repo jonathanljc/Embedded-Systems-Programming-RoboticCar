@@ -25,6 +25,7 @@ This repository contains the files for the INF2004 Robotic Car project for Team 
 - `encoder/` folder contains the files for the Encoder component (Buddy 5)
 
 We are utilising file headers and making our components into libraries for the main .c files in `main/`.
+When building, only would need to build the remote, car, dashboard executable and place the .uf2 into the respective Pico Ws.
 
 
 ## Variables

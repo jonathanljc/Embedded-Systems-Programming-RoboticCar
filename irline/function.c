@@ -142,6 +142,9 @@ void decode() {
     char decoded_char = decodedchar();
     if (decoded_char != '?') {
         printf("Decoded Character: %c\n", decoded_char);
+        char telemtryBarcode[100];
+        sprintf(telemtryBarcode, "Barcode: %c", decoded_char);
+        xMessageBufferSend(wifiMessageBuffer, telemtryBarcode, strlen(telemtryBarcode) + 1, 0);
     } else {
         printf("Failed to decode barcode.\n");
     }
