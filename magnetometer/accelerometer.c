@@ -141,12 +141,12 @@ void magnetometer_task(__unused void *params)
         generate_control_command(&accel_data, command);
 
         // Only send command if it differs from the previous command
-        if (strcmp(command, last_command) != 0)
-        {
+        // if (strcmp(command, last_command) != 0)
+        // {
             xMessageBufferSend(wifiMessageBuffer, command, strlen(command) + 1, 0);
-            strncpy(last_command, command, sizeof(last_command) - 1); // Update last command
-            printf("Command: %s\n", command);
-        }
+            // strncpy(last_command, command, sizeof(last_command) - 1); // Update last command
+            // printf("Command: %s\n", command);
+        // }
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }
