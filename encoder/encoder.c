@@ -115,43 +115,43 @@ void poll_encoder(Encoder *encoder, uint32_t gpio_pin) {
                     // Send the message to Wi-Fi
                     char combined_message[100];
                     if(telemetryInstruction == 'f' && telemetrySpeed == '0'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Forward at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Forward at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'f'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Forward at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Forward at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             telemetrySpeed, left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'b' && telemetrySpeed == '0'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Backward at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Backward at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'b'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Backward at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Backward at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             telemetrySpeed, left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'l' && telemetrySpeed == '0'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Left at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Left at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'l'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Left at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Left at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             telemetrySpeed, left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'r' && telemetrySpeed == '0'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Right at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Right at 100%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'r'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Right at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Right at %c0%% | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             telemetrySpeed, left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 's'){
-                        snprintf(combined_message, 100, "Mode: Remote | Instruction: Stop | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Remote | Ins: Stop | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                             left_average_speed, left_total_distance,
                             right_average_speed, right_total_distance);
                     }else if(telemetryInstruction == 'a'){
-                        snprintf(combined_message, 100, "Mode: Autonomous | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
+                        snprintf(combined_message, 100, "Mode: Auto | Left: %.2f m/s, %.2f m | Right: %.2f m/s, %.2f m\n",
                                 left_average_speed, left_total_distance,
                                 right_average_speed, right_total_distance);
                     }else{

@@ -223,7 +223,7 @@ void main_task(void *pvParameters)
 
     printf("Connecting to WiFi...\n");
     gpio_put(2, 1);
-    cyw43_arch_wifi_connect_timeout_ms("Felix-iPhone", "felixfelix", CYW43_AUTH_WPA2_AES_PSK, 30000);
+    cyw43_arch_wifi_connect_timeout_ms(MQTT_SSID, MQTT_PW, CYW43_AUTH_WPA2_AES_PSK, 30000);
     gpio_put(3, 1);
     printf("Connected.\n");
 

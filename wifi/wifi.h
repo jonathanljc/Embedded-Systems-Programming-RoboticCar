@@ -24,7 +24,9 @@
 #include "message_buffer.h"
 
 // MQTT Definitions
-#define MQTT_SERVER_IP "172.20.10.4"
+#define MQTT_SERVER_IP "192.168.222.40"
+#define MQTT_SSID "CPH1719"
+#define MQTT_PW "12345678"
 // #define MQTT_SERVER_IP "5.196.78.28"
 #define MQTT_SERVER_PORT 1883
 
