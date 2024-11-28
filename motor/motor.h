@@ -30,6 +30,8 @@ void set_speed40(uint32_t gpioLeft, uint32_t gpioRight);
 void set_speed50(uint32_t gpioLeft, uint32_t gpioRight);
 void set_speed70(uint32_t gpioLeft, uint32_t gpioRight);
 void set_speed100(uint32_t gpioLeft, uint32_t gpioRight);
+void speed50(uint32_t gpioLeft, uint32_t gpioRight);
+void speed100(uint32_t gpioLeft, uint32_t gpioRight);
 void set_left_motor_speed(uint32_t gpio, float speed);
 void set_right_motor_speed(uint32_t gpio, float speed);
 void adjust_motor_speed(float left_speed, float right_speed, float setpoint, float dt);

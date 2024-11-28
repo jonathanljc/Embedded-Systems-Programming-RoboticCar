@@ -57,11 +57,11 @@ void ultrasonic_task(void *pvParameters) {
     float setpoint = 0.0;
     float left_average_speed = 0.0;
     float right_average_speed = 0.0;
-    // init_encoder_gpio();
+    init_encoder_gpio();
     setupUltrasonicPins();
-    // init_motor_pins();
-    // setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-    // init_pid();
+    init_motor_pins();
+    setup_pwm(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+    init_pid();
 
     while (true) {
         // Trigger the ultrasonic sensor
@@ -81,7 +81,7 @@ void ultrasonic_task(void *pvParameters) {
 
         if (message.obstacleDetected && obstacleFlag == false) {
             stop_motors();
-            xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
+            // xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
             obstacleFlag = true;
             // Format the Wi-Fi message
             snprintf(wifi_message, sizeof(wifi_message), 
@@ -112,18 +112,18 @@ void ultrasonic_task(void *pvParameters) {
                     }
                     switch(speed){
                         case '5':
-                            set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
+                            speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            // xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
                             telemetrySpeed = '5';
                             break;
                         case '7':
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
+                            // xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
                             telemetrySpeed = '7';
                             break;
                         case '0':
-                            set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                            xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
+                            speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            // xMessageBufferSend(motorMessageBuffer, "0.4", 3, portMAX_DELAY);
                             telemetrySpeed = '0';
                             break;
                         default:
@@ -145,7 +145,7 @@ void ultrasonic_task(void *pvParameters) {
 
                 // Check if the command is "stop"
                 if (stopCheck == 's') {
-                    xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
+                    // xMessageBufferSend(motorMessageBuffer, "0.0", 3, portMAX_DELAY);
                     stop_motors();
                     telemetryInstruction = 's';
                 } else {
@@ -175,23 +175,23 @@ void ultrasonic_task(void *pvParameters) {
                     // Use switch-case to set the speed
                     switch (speed) {
                         case '5':  // Set speed to 50%
-                            set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-                            xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
+                            // xMessageBufferSend(motorMessageBuffer, "0.5", 3, portMAX_DELAY);
 
                             telemetrySpeed = '5';
                             break;
                         case '7':  // Set speed to 70%
                             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-                            xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
+                            // xMessageBufferSend(motorMessageBuffer, "0.7", 3, portMAX_DELAY);
 
                             telemetrySpeed = '7';
                             break;
                         case '0':  // Set speed to 100%
-                            set_speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                            speed100(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                             
-                           xMessageBufferSend(motorMessageBuffer, "1.0", 3, portMAX_DELAY);
+                           // xMessageBufferSend(motorMessageBuffer, "1.0", 3, portMAX_DELAY);
 
                             telemetrySpeed = '0';
                             break;

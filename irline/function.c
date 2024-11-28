@@ -142,9 +142,9 @@ void decode() {
     char decoded_char = decodedchar();
     if (decoded_char != '?') {
         printf("Decoded Character: %c\n", decoded_char);
-        char telemtryBarcode[100];
-        sprintf(telemtryBarcode, "Barcode: %c", decoded_char);
-        xMessageBufferSend(wifiMessageBuffer, telemtryBarcode, strlen(telemtryBarcode) + 1, 0);
+        // char telemtryBarcode[100];
+        // sprintf(telemtryBarcode, "Barcode: %c", decoded_char);
+        // xMessageBufferSend(wifiMessageBuffer, telemtryBarcode, strlen(telemtryBarcode) + 1, 0);
     } else {
         printf("Failed to decode barcode.\n");
     }
@@ -259,7 +259,7 @@ void unified_task(void *pvParameters) {
     do {
         adc_select_input(1); // Read from line sensor (GPIO 27)
         line_adc_value = adc_read();
-        printf("The ADC value is: %u\n", line_adc_value);
+        // printf("The ADC value is: %u\n", line_adc_value);
         black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
 
         if (!black_line_detected) {
@@ -274,7 +274,7 @@ void unified_task(void *pvParameters) {
         // **Line Sensor Logic** (Motor Control)
         adc_select_input(1); // Switch to line sensor (GPIO 27)
         line_adc_value = adc_read();
-        printf("The ADC value is: %u\n", line_adc_value);
+        // printf("The ADC value is: %u\n", line_adc_value);
         black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
 
         if (black_line_detected) {

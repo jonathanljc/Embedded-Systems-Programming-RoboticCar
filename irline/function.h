@@ -23,7 +23,7 @@ extern const char code39_chars[];
 
 #define LINE_SENSOR_PIN 27
 #define BARCODE_SENSOR_PIN 26
-#define LINE_SENSOR_THRESHOLD 1000
+#define LINE_SENSOR_THRESHOLD 3200
 #define BARCODE_SENSOR_THRESHOLD 1000
 #define MAX_WHITE_TIME 50000
 
@@ -31,7 +31,7 @@ extern bool once_detect_black;
 extern bool initial_blackline_detected;
 extern bool disconnectRemote;
 
-extern MessageBufferHandle_t wifiMessageBuffer;
+// extern MessageBufferHandle_t wifiMessageBuffer;
 
 
 // Motor Control

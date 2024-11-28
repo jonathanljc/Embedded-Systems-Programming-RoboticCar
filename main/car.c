@@ -36,13 +36,13 @@ int main() {
     xTaskCreate(ultrasonic_task, "Ultrasonic Task", 256, kalman, 2, &ultrasonicTaskHandle); 
 
     // Create a task for wifi
-    xTaskCreate(main_task, "Wifi Task", 512, "car", 3, &wifiTaskHandle);
+    xTaskCreate(main_task, "Wifi Task", 256, "car", 3, &wifiTaskHandle);
 
      // Create Unified Task
     xTaskCreate(unified_task, "Sensor Task", 1024, NULL, 1, NULL);
 
     // Create a task for motor control
-    xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 1, NULL);
+    // xTaskCreate(motor_control_task, "Motor Control Task", 256, NULL, 1, NULL);
  
     // Start the FreeRTOS scheduler 
     vTaskStartScheduler(); 
