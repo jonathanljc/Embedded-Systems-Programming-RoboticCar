@@ -240,19 +240,8 @@ void unified_task(void *pvParameters) {
 
     uint16_t line_adc_value = 0;
     bool black_line_detected = false;
-
-    uint16_t barcode_adc_value = 0;
-    const char *current_color = NULL;
-    const char *initial_colour = NULL;
-    uint64_t last_transition_time = 0;
-    uint64_t last_white_time = 0;
-    uint64_t current_time = 0;
-    bool status_decode = false;
-    bool once_detect_black = false;
-    uint16_t num_of_bar = 0;
-    uint64_t bar_length[BAR_MAX] = {0};
-    const char *bar_colouring[BAR_MAX] = {0};
-    uint64_t max_width = 0;
+    uint64_t rotation_start_time = 0; // Track rotation start time
+    bool is_rotating = false;         // Track if the car is in a rotation state
 
     // Wait until black surface is detected to start
     printf("Waiting for black surface to start...\n");
@@ -281,26 +270,41 @@ void unified_task(void *pvParameters) {
             // Move forward on black
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+            is_rotating = false; // Reset rotation status
         } else {
             // Stop motors on white
             set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
             set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
 
+            if (!is_rotating) {
+                is_rotating = true;
+                rotation_start_time = xTaskGetTickCount(); // Record rotation start time
+            }
+
             // Rotate left, then right if no black is detected
             while (!black_line_detected) {
+                // Check if rotation exceeds 5 seconds
+                uint64_t elapsed_time = xTaskGetTickCount() - rotation_start_time;
+                if (elapsed_time >= pdMS_TO_TICKS(3000)) {
+                    // Stop motors forever
+                    printf("No black surface detected for 5 seconds. Stopping motors permanently.\n");
+                    set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
+                    set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
+                    vTaskDelete(NULL); // Terminate the task
+                }
+
                 // Rotate left and continuously check for black
                 rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                 set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-                
-                for (int i = 0; i < 40; i++) { // 200 iterations of 10ms delay = 2 seconds
+                for (int i = 0; i < 40; i++) { // 400ms rotation
                     vTaskDelay(pdMS_TO_TICKS(10)); // Delay for 10ms
                     adc_select_input(1); // Check for black again
                     line_adc_value = adc_read();
                     black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
-                    
+
                     if (black_line_detected) {
-                        // If black is detected, break out of rotation
+                        is_rotating = false; // Reset rotation status
                         break;
                     }
                 }
@@ -312,15 +316,15 @@ void unified_task(void *pvParameters) {
                 // Rotate right and continuously check for black
                 rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                 set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                
-                for (int i = 0; i < 40; i++) { // 200 iterations of 10ms delay = 2 seconds
+
+                for (int i = 0; i < 40; i++) { // 400ms rotation
                     vTaskDelay(pdMS_TO_TICKS(10)); // Delay for 10ms
                     adc_select_input(1); // Check for black again
                     line_adc_value = adc_read();
                     black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
-                    
+
                     if (black_line_detected) {
-                        // If black is detected, break out of rotation
+                        is_rotating = false; // Reset rotation status
                         break;
                     }
                 }
@@ -334,6 +338,7 @@ void unified_task(void *pvParameters) {
             if (black_line_detected) {
                 move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
                 set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                is_rotating = false; // Reset rotation status
             }
         }
 
@@ -341,5 +346,6 @@ void unified_task(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
+
 
 
