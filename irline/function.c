@@ -236,9 +236,7 @@ void unified_task(void *pvParameters) {
     adc_gpio_init(LINE_SENSOR_PIN);    // Line sensor
     adc_gpio_init(BARCODE_SENSOR_PIN); // Barcode sensor
 
-
     adc_select_input(0);
-
 
     uint16_t line_adc_value = 0;
     bool black_line_detected = false;
@@ -261,6 +259,7 @@ void unified_task(void *pvParameters) {
     do {
         adc_select_input(1); // Read from line sensor (GPIO 27)
         line_adc_value = adc_read();
+        printf("The ADC value is: %u\n", line_adc_value);
         black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
 
         if (!black_line_detected) {
@@ -275,109 +274,71 @@ void unified_task(void *pvParameters) {
         // **Line Sensor Logic** (Motor Control)
         adc_select_input(1); // Switch to line sensor (GPIO 27)
         line_adc_value = adc_read();
+        printf("The ADC value is: %u\n", line_adc_value);
         black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
 
         if (black_line_detected) {
             // Move forward on black
             move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
             set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-            printf("The adc is ",line_adc_value);
         } else {
             // Stop motors on white
             set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
             set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
-            printf("The adc is ",line_adc_value);
 
             // Rotate left, then right if no black is detected
             while (!black_line_detected) {
+                // Rotate left and continuously check for black
                 rotate_left(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                vTaskDelay(pdMS_TO_TICKS(350));
+                set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
 
-                adc_select_input(1); // Check for black again
-                line_adc_value = adc_read();
-                black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
-
-                if (!black_line_detected) {
-                    rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                    set_speed40(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
-                    vTaskDelay(pdMS_TO_TICKS(300));
-
-                    adc_select_input(1); // Check again
+                
+                for (int i = 0; i < 40; i++) { // 200 iterations of 10ms delay = 2 seconds
+                    vTaskDelay(pdMS_TO_TICKS(10)); // Delay for 10ms
+                    adc_select_input(1); // Check for black again
                     line_adc_value = adc_read();
                     black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
-                }
-            }
-
-            // Stop briefly when black is detected again
-            //set_motor_speed(L_MOTOR_PWM_PIN, 0, true);
-            //set_motor_speed(R_MOTOR_PWM_PIN, 0, false);
-            vTaskDelay(pdMS_TO_TICKS(500));
-        }
-
-        
-        
-        adc_select_input(0); 
-        barcode_adc_value = adc_read();
-        current_color = (barcode_adc_value > THRESHOLD) ? "Black" : "White";
-        current_time = time_us_64();
-
-        if (!status_decode && strcmp(current_color, "Black") == 0) {
-            status_decode = true;
-            reset();
-            last_transition_time = current_time;
-            initial_colour = "Black"; 
-            printf("Starting barcode detection\n");
-        }
-
-        if (status_decode && !once_detect_black && strcmp(current_color, "Black") == 0) {
-            once_detect_black = true;
-            initial_colour = "Black";
-        }
-
-        if (status_decode && once_detect_black) {
-            if (strcmp(current_color, initial_colour) != 0) {
-                uint64_t pulse_timing = current_time - last_transition_time;
-
-                if (pulse_timing > NOISE_THRESHOLD + DEBOUNCE_DELAY && num_of_bar < BAR_MAX) {
-                    bar_length[num_of_bar] = pulse_timing;
-                    bar_colouring[num_of_bar] = initial_colour;
-
-                    printf("Captured Bar Color: %s\n", initial_colour);
-                    printf("Captured bar #%d: Width = %llu us\n", num_of_bar, pulse_timing);
-
-                    if (pulse_timing > max_width) {
-                        max_width = pulse_timing;
-                        printf("Updated Max Width: %llu\n", max_width);
+                    
+                    if (black_line_detected) {
+                        // If black is detected, break out of rotation
+                        break;
                     }
-                    num_of_bar++;
                 }
 
-                if (num_of_bar >= BAR_MAX) {
-                    decode();
+                if (black_line_detected) {
+                    break;
                 }
 
-                initial_colour = current_color;
-                last_transition_time = current_time;
+                // Rotate right and continuously check for black
+                rotate_right(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                set_speed50(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                
+                for (int i = 0; i < 40; i++) { // 200 iterations of 10ms delay = 2 seconds
+                    vTaskDelay(pdMS_TO_TICKS(10)); // Delay for 10ms
+                    adc_select_input(1); // Check for black again
+                    line_adc_value = adc_read();
+                    black_line_detected = (line_adc_value >= LINE_SENSOR_THRESHOLD);
+                    
+                    if (black_line_detected) {
+                        // If black is detected, break out of rotation
+                        break;
+                    }
+                }
+
+                if (black_line_detected) {
+                    break;
+                }
             }
 
-            // Check for extended white period to force decode
-            if (strcmp(current_color, "White") == 0) {
-                if (last_white_time == 0) {
-                    last_white_time = current_time;
-                } else if (current_time - last_white_time > MAX_WHITE_TIME) {
-                    printf("Detected extended white space - triggering decode.\n");
-                    decode();
-                    last_white_time = 0;
-                }
-            } else {
-                last_white_time = 0;
+            // If black is detected, move forward
+            if (black_line_detected) {
+                move_forward(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
+                set_speed70(L_MOTOR_PWM_PIN, R_MOTOR_PWM_PIN);
             }
-        } else {
-            last_white_time = 0;
-        } 
+        }
 
-        vTaskDelay(pdMS_TO_TICKS(100)); // Small delay for next ADC reading
+        // Small delay before next iteration
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
